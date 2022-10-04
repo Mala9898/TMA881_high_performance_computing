@@ -7,25 +7,25 @@
 typedef unsigned short ushort;
 
 int main() {
-	// omp_set_num_threads(1);
+	omp_set_num_threads(1);
 	// omp_set_num_threads(5);
 	// omp_set_num_threads(10);
-	omp_set_num_threads(20);
+	// omp_set_num_threads(20);
 
 	// --- timing
 	double start_time, end_time, elapsed;
 
 	// --- 1. read cell coordintes ---
-	// FILE *file = fopen("cells", "r");
+	FILE *file = fopen("cells", "r");
 	// FILE *file = fopen("cell_e4", "r");
-	FILE *file = fopen("cell_e5", "r");
+	// FILE *file = fopen("cell_e5", "r");
 	if(file==NULL) {
 	 	printf("ERROR: could not find file cells...\n");
 		return -1;
 	}
-	// int arr_size = 10*3;
+	int arr_size = 10*3;
 	// int arr_size = 1e4*3;
-	int arr_size = 1e5*3;
+	// int arr_size = 1e5*3;
 	float* cell_floats = (float*)malloc(sizeof(float)*arr_size);
 	float temp = 0.0f;
 	int counter = 0;
@@ -81,11 +81,11 @@ int main() {
 
 		start_time = omp_get_wtime();
 	// printf("--- printing distsances: ---\n");
-	// for(int i = 0; i < dist_max_len; i++) {
-	// 	if(distance_map[i])
-	// 		printf("%d%d.%d%d %hu\n", i/1000, (i%1000)/100,(i%100)/10,(i%10), distance_map[i]);
-	// 		// printf("%02d.%02d %hu\n", i, i*100, distance_map[i]);
-	// }
+	for(int i = 0; i < dist_max_len; i++) {
+		if(distance_map[i])
+			printf("%d%d.%d%d %hu\n", i/1000, (i%1000)/100,(i%100)/10,(i%10), distance_map[i]);
+			// printf("%02d.%02d %hu\n", i, i*100, distance_map[i]);
+	}
 
 		printf("printing stdout  %20f time\n", omp_get_wtime()-start_time);
 	
