@@ -7,10 +7,10 @@
 typedef unsigned short ushort;
 
 int main() {
-	omp_set_num_threads(1);
+	// omp_set_num_threads(1);
 	// omp_set_num_threads(5);
 	// omp_set_num_threads(10);
-	// omp_set_num_threads(20);
+	omp_set_num_threads(20);
 
 	// --- timing
 	double start_time, end_time, elapsed;
@@ -26,6 +26,7 @@ int main() {
 	// find number of cells
 	fseek(file, 0L, SEEK_END); // end of file
 	long file_total_bytes = ftell(file);
+	printf("length of file in bytes: %li", file_total_bytes);
 	fseek(file, 0L, SEEK_SET); // beginning of file
 	
 	long num_cells = file_total_bytes/(3L*8L);
@@ -49,7 +50,7 @@ int main() {
 	// printf("%f \n", cell_floats[arr_size-1]);
 	// printf("computing distances...\n");
 	int dist_max_len = 3465; // 3 * (20^2)
-	ushort* distance_map = (ushort*) calloc(dist_max_len, sizeof(ushort));
+	int* distance_map = (int*) malloc(dist_max_len*sizeof(int));
 
 
 	// --- 2. compute distances ---
@@ -81,7 +82,7 @@ int main() {
 	// printf("--- printing distsances: ---\n");
 	for(int i = 0; i < dist_max_len; i++) {
 		if(distance_map[i])
-			printf("%d%d.%d%d %hu\n", i/1000, (i%1000)/100,(i%100)/10,(i%10), distance_map[i]);
+			printf("%d%d.%d%d %d\n", i/1000, (i%1000)/100,(i%100)/10,(i%10), distance_map[i]);
 			// printf("%02d.%02d %hu\n", i, i*100, distance_map[i]);
 	}
 

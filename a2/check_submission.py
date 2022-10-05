@@ -184,5 +184,3 @@ if passed:
   print("submission passes script")
 else:
   print("submission DOES NOT pass script")
-
-print("MY VERSION")
