@@ -3,27 +3,14 @@
 #include <math.h>
 #include <time.h>
 #include <omp.h>
-#include <getopt.h>
+#include <getopt.h> // args
 
-// ----------------------------------------------------
-// TMA881 Assignment 2: OpenMP
-// Submission by Stanislaw Jan Malec
-// ----------------------------------------------------
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
 
-/*
-Main idea: 
-	Use two blocks. First block computes distances within itself (parallelized).
-	Then slide the 2nd block from the beginning up until before the current block, 
-	computing distances between current and 2nd block. 
-*/
-
+typedef unsigned short ushort;
 typedef long long ll;
 
-// loads a block of cells
-// ------------ args ------------
-// i     : block index
-// width : how many cells
-// block : pointer to where to store 
+// i : block index
 ll load_block(FILE* file, ll i, ll width, float *block ) {
 	ll counter = 0;
 	fseek(file, i*width*3L*8L, SEEK_SET); // beginning of file
@@ -35,7 +22,7 @@ ll load_block(FILE* file, ll i, ll width, float *block ) {
 	}
 	return counter/3;
 }
-// increment frequency of a calculated distance 
+// static inline = force compiler to inline
 static inline void add_count(long i, long j, int* distance_map, float* cell_floats) {
 	float startx = cell_floats[i*3];
 	float starty = cell_floats[i*3 + 1];
@@ -49,7 +36,7 @@ static inline void add_count(long i, long j, int* distance_map, float* cell_floa
 	// #pragma omp atomic
 	distance_map[idx]++;
 }
-// increment frequency of a calculated distance across two blocks
+// add_count_from_2_blocks    (current_block_i,prev_block_i, distance_map, CURRENT_BLOCK, PREVIOUS_BLOCK);
 static inline void add_count_from_2_blocks(long i, long j, int* distance_map, float* current_block, float*prev_block) {
 	float startx = current_block[i*3];
 	float starty = current_block[i*3 + 1];
@@ -115,6 +102,7 @@ int main(int argc, char*argv[]) {
 		cells_read= load_block(file, block_i, width, CURRENT_BLOCK);
 
 		// compute distances within block first
+		// iterate on individual cell indices
 		#pragma omp parallel for reduction(+:distance_map[:dist_max_len])
 		for (long i = 0; i < cells_read; i++) {
 			for(long j = i+1; j < cells_read; j++) {
@@ -122,7 +110,7 @@ int main(int argc, char*argv[]) {
 			}
 		}
 		
-		if (block_i == 0) // there are no blocks before the first one
+		if (block_i == 0)
 			continue;
 		
 		// compute distances of current block against all previous blocks
