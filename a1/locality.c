@@ -42,6 +42,7 @@ int main() {
 	}
 	clock_t end = clock();
 	double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
+	printf("%lf\n", row_sum[0]);
 	printf("row sum took %f time\n", elapsed);
 
 
@@ -52,6 +53,7 @@ int main() {
 	}
 	clock_t end2 = clock();
 	double elapsed2 = (double)(end2 - start2) / CLOCKS_PER_SEC;
+	printf("%lf\n", col_sum[0]);
 	printf("col sum took %f time\n", elapsed2);
 
 	

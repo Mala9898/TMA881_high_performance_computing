@@ -42,7 +42,7 @@ int main () {
 
 	clock_t start4 = clock();
 	for(int k = 0; k < 1000; k++) {
-		// indirect addressing
+		// direct addressing
 		for(int i = 0; i < vec_size; i++) {
 			// int idx = p[i];
 			y[i] += x[i] * a; 

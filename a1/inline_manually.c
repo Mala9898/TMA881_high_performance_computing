@@ -28,7 +28,9 @@ int main() {
 	for(int k = 0; k < 1000000; k++) {
 
 		for (int i = 0; i < vs; i++) {
-			mul_cpx(&as_re[i], &as_im[i], &bs_re[i], &bs_im[i], &cs_re[i], &cs_im[i]);
+			// mul_cpx(&as_re[i], &as_im[i], &bs_re[i], &bs_im[i], &cs_re[i], &cs_im[i]);
+			as_re[i]= bs_re[i]*cs_re[i] - bs_im[i]*cs_im[i];
+			as_im[i] = bs_im[i]*cs_re[i] + bs_re[i]*cs_im[i];
 		}
 		
 		// printf("%lf, %lf i", as_re[2], as_im[2]);
