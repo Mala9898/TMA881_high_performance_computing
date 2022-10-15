@@ -42,19 +42,19 @@ int worker_thread(void* arg) {
 	for(int i = thread_arg->i_start; i < thread_arg->row_size; i += thread_arg->i_step) {
 		uchar * row = (uchar*) malloc(thread_arg->row_size * sizeof(uchar));
 		for (int j = 0; j < thread_arg->row_size; j++)
-			row[j] = j % 256;
+			row[j] = j%2;//i*1000 +j;//j % 256;
 		
-		printf("worker thread %d mutex.lock()\n", thread_arg->thread_number);
+		// printf("worker thread %d mutex.lock()\n", thread_arg->thread_number);
 		mtx_lock(thread_arg->mutex);
-		printf("worker thread %d mutex ENTERED\n", thread_arg->thread_number);
+		// printf("worker thread %d mutex ENTERED\n", thread_arg->thread_number);
 		thread_arg->matrix_results[i] = row;
 		if ((i + thread_arg->i_step) >= thread_arg->row_size) {
 			thread_arg->thread_status[thread_arg->thread_number] = 1000000;
 		}
 		else
 			thread_arg->thread_status[thread_arg->thread_number] = i;//thread_arg->i_step;
-		printf(">worker thread %d i=%d DONE✅\n", thread_arg->thread_number, i);
-		printf("worker thread %d leaves mutex()\n", thread_arg->thread_number);
+		// printf(">worker thread %d i=%d DONE✅\n", thread_arg->thread_number, i);
+		// printf("worker thread %d leaves mutex()\n", thread_arg->thread_number);
 		mtx_unlock(thread_arg->mutex);
 		cnd_signal(thread_arg->condition_processed_row);
 
@@ -67,13 +67,14 @@ int worker_thread(void* arg) {
 int writer_thread(void* arg) {
 	const thread_writer_arg * thread_arg = (thread_writer_arg*) arg;
 
+	long long sum = 0;
 	int bound;
 	bound = thread_arg->row_size;
 	for(int i = 0; i < thread_arg->row_size; ) {
-		printf("WRITER mutex.lock()\n");
+		// printf("WRITER mutex.lock()\n");
 		mtx_lock(thread_arg->mutex);
 		{
-			printf("---WRITER mutex ENTERED\n");
+			// printf("---WRITER mutex ENTERED\n");
 			bound = thread_arg->row_size;
 			int num_complete = 0;
 			for(int t = 0; t < thread_arg->num_threads; t++) {
@@ -82,10 +83,10 @@ int writer_thread(void* arg) {
 				if (thread_arg->thread_status[t] == 1000000)
 					num_complete++;
 			}
-			printf(">bound=%d i=%d\n", bound, i);
+			// printf(">bound=%d i=%d\n", bound, i);
 
 			if (num_complete == thread_arg->num_threads){
-				printf("\t !!! [writer] all workers finished their job!\n");
+				// printf("\t !!! [writer] all workers finished their job!\n");
 				bound = thread_arg->row_size - 1;
 				mtx_unlock(thread_arg->mutex);
 			}
@@ -93,22 +94,27 @@ int writer_thread(void* arg) {
 				// mtx_unlock(thread_arg->mutex);
 				// thrd_sleep(&(struct timespec){.tv_sec=1}, NULL);
 				// continue;
-				printf("\t\t WRITER: WAITING FOR CONDITION \n");
+				// printf("\t\t WRITER: WAITING FOR CONDITION \n");
 				cnd_wait(thread_arg->condition_processed_row, thread_arg->mutex);
 				mtx_unlock(thread_arg->mutex);
-				printf("\t\t WRITER: CONDITION FIRED \n");
+				// printf("\t\t WRITER: CONDITION FIRED \n");
 				continue;
 			}
 			else{ // there's work to do
-				printf("\t\t WRITER: Leaving mutex() \n");
+				// printf("\t\t WRITER: Leaving mutex() \n");
 				mtx_unlock(thread_arg->mutex);
 			}
 			for( ; i < bound+1; i++) {
-				printf("processing row %d bound = %d\n", i, bound);
+				// printf("processing row %d bound = %d\n", i, bound);
+				for (int j = 0; j < thread_arg->row_size; j++){
+					sum += thread_arg->matrix_results[i][j];
+				}
+				
 			}
 		}
 		
 	}
+	printf("⭐️ final sum = %d\n", sum);
 }
 
 
@@ -142,8 +148,8 @@ int main(int argc, char*argv[]) {
 	}
 
 	// ------------
-	num_rows = 1000;
-	num_threads = 8;
+	// num_rows = 1000;
+	// num_threads = 1;
 	
 	uchar ** matrix_results = (uchar**) malloc(num_rows*sizeof(uchar*)); 
 	
