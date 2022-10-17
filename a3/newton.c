@@ -60,78 +60,83 @@ typedef struct {
 } thread_writer_arg;
 
 static inline void newton(double complex z, unsigned char* attractor, unsigned char* convergence, int degree) {
-	double complex x_current = z;
+	// double complex x_current = z;
 
 	*convergence = 50; 
 	*attractor = 10;
 
-	int found = 0;
+	// int found = 0;
 	for (int i = 0; i < 50; i++) {
 
 		if (fabs(cimag(z)) > MAX_DIST || fabs(creal(z)) > MAX_DIST) { // did compution explode?
 			*attractor = 10; 
 			*convergence = i; // bring closer to to 255 color value
-			found = 1;
-			break;
+			// found = 1;
+			return;
 		}
 		else if (creal(z)*creal(z) + cimag(z)*cimag(z) <= MIN_DIST_SQUARED){ // is it close to origin?
 			*attractor = 10; 
 			*convergence = i;
-			found = 1;
-			break;
+			// found = 1;
+			return;
 		}
 
 		switch (degree) {
 		case 1:
 			z = z - (z-1);
-			break;
+			return;
 		case 2:
 			z = z - (z*z -1)/(2*z);
-			break;
+			return;
 		case 3:
 			z = z - (z*z*z -1)/(3*z*z);
-			break;
+			return;
 		case 4:
 			z = z - (z*z*z*z -1)/(4*z*z*z);
-			break;
+			return;
 		case 5:
 			z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
-			break;
+			return;
 		case 6:
 			z = z - (z*z*z*z*z*z -1)/(6*z*z*z*z*z);
-			break;
+			return;
 		case 7:
 			z = z - (z*z*z*z*z*z*z -1)/(7*z*z*z*z*z*z);
-			break;
+			return;
 		case 8:
 			z = z - (z*z*z*z*z*z*z*z -1)/(8*z*z*z*z*z*z*z);
-			break;
+			return;
 		case 9:
 			z = z - (z*z*z*z*z*z*z*z*z -1)/(9*z*z*z*z*z*z*z*z);
-			break;
+			return;
 		default:
-			break;
+			return;
 		}
-		if (found)
-			break;
+		// if (found)
+		// 	break;
 		
 		for (int root_i = 0; root_i < degree; root_i++){
 			// double delta_real = fabs(creal(x_current - roots[degree][root_i]));
 			// double delta_im = fabs(cimag(x_current - roots[degree][root_i]));
-			double delta_real = fabs(creal(z - roots[degree][root_i]));
-			double delta_im = fabs(cimag(z - roots[degree][root_i]));
+			
+			// BELOW WORKS
+			// double delta_real = fabs(creal(z - roots[degree][root_i]));
+			// double delta_im = fabs(cimag(z - roots[degree][root_i]));
+			complex double complex_delta = z - roots[degree][root_i];
+			double delta_real = fabs(creal(complex_delta));
+			double delta_im = fabs(cimag(complex_delta));
 			if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
 				*attractor = root_i;
 				*convergence = i;
-				found = 1;
-				break;
+				// found = 1;
+				return;
 			}
 		}
 	}
-	if (!found) {
-		// *convergence = 50; 
-		// *attractor = 10;
-	}
+	// if (!found) {
+	// 	// *convergence = 50; 
+	// 	// *attractor = 10;
+	// }
 }
 
 int worker_thread(void* arg) {
@@ -142,7 +147,7 @@ int worker_thread(void* arg) {
 	int degree = thread_arg->degree;
 	int i_step = thread_arg->i_step;
 
-	printf("worker thread %d launched\n", thread_arg->thread_number);
+	// printf("worker thread %d launched\n", thread_arg->thread_number);
 
 	// start working on rows
 	for(int i = thread_arg->i_start; i < row_size; i += i_step) {
@@ -247,21 +252,29 @@ int writer_thread(void* arg) {
 				// printf("\t\t WRITER: Leaving mutex() \n");
 				mtx_unlock(thread_arg->mutex);
 			}
+			unsigned char conv_val;
+			unsigned char attr_val;
+			unsigned char conv_val2;
+			unsigned char attr_val2;
 			// process completed rows
 			for( ; i < bound+1; i++) { 
 				// printf("processing row %d bound = %d\n", i, bound);
-				for (int j = 0; j < thread_arg->row_size; j++){
-					// sum += thread_arg->matrix_results[i][j];
-					unsigned char conv_val = thread_arg->convergences[i][j];
-					unsigned char attr_val = thread_arg->attractors[i][j];
+				for (int j = 0; j < thread_arg->row_size; j+=2){
 					
-					// if (i ==0)
-					// 	printf("%d ", conv_val);
-					// idx_conv += sprintf(&convergence_image[idx_conv], "%d %d %d ", conv_val,conv_val,conv_val);
-					
-					// memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
-					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
+					conv_val = thread_arg->convergences[i][j];
+					attr_val = thread_arg->attractors[i][j];
 
+					conv_val2 = thread_arg->convergences[i][j+1];
+					attr_val2 = thread_arg->attractors[i][j+1];
+					
+					
+					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
+					
+					memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
+					memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
+
+					/*
 					// add newline after inserting a row
 					if (j == thread_arg->row_size -1) {
 						char * n = "\n";
@@ -269,17 +282,18 @@ int writer_thread(void* arg) {
 						// memcpy(convergence_image+idx_conv+12, n, 2);
 						idx_conv+=2;
 					}
-					// memcpy(attractor_image+idx_conv, colors_convolution[conv_val], 12);
-					idx_conv+=12;
+					*/
+					// idx_conv+=12;
+					idx_conv+=24;
 				}
 				
 			}
 		}
 		
 	}
-	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
 	fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+	fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+
 	fflush(file_convergence);
 	fflush(file_attractor);
 	fclose(file_convergence);
