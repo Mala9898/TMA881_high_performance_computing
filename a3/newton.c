@@ -59,10 +59,10 @@ typedef struct {
 	cnd_t *condition_processed_row;
 } thread_writer_arg;
 
-// static inline void netwon1(double complex zz, unsigned char* attractor, unsigned char* convergence, int degree){
 
-// }
-
+// ---------------------------------------------------------------------------------------------------------
+// This function is kind of nasty, but by avoiding a switch() inside a for-loop we speedup the computation.
+// ---------------------------------------------------------------------------------------------------------
 static inline void newton(double complex zz, unsigned char* attractor, unsigned char* convergence, int degree) {
 	double complex z = zz;
 
@@ -409,11 +409,6 @@ static inline void newton(double complex zz, unsigned char* attractor, unsigned 
 			break;
 	}
 
-	
-	// if (!found) {
-	// 	// *convergence = 50; 
-	// 	// *attractor = 10;
-	// }
 }
 
 int worker_thread(void* arg) {
@@ -477,7 +472,6 @@ int writer_thread(void* arg) {
 
 	char* filename_attr = (char*)malloc(sizeof(char)*50);
 	char* filename_attr_template = "newton_attractors_x%d.ppm";
-	// HERE
 	int filename_attr_bytes = sprintf(filename_attr, filename_attr_template, thread_arg->degree);
 	FILE *file_attractor = fopen(filename_attr, "w");
 	fwrite((void*)header_string, sizeof(char), header_bytes, file_attractor);
@@ -485,7 +479,6 @@ int writer_thread(void* arg) {
 	// convergence file
 	char* filename_conv = (char*)malloc(sizeof(char)*50);
 	char* filename_conv_template = "newton_convergence_x%d.ppm";
-	// HERE
 	int filename_conv_bytes = sprintf(filename_conv, filename_conv_template, thread_arg->degree);
 	FILE *file_convergence = fopen(filename_conv, "w");
 	fwrite((void*)header_string, sizeof(char), header_bytes, file_convergence);
@@ -493,11 +486,10 @@ int writer_thread(void* arg) {
 
 	uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*12+1);
 	uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*12+1);
-	// uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
-	// uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
 	
-	// int idx_conv = 0;
 	int bound = thread_arg->row_size;
+
+	// enable full buffering
 	setvbuf(file_attractor, attractor_image, _IOFBF, row_size*12);
 	setvbuf(file_convergence, convergence_image, _IOFBF, row_size*12);
 	for(int i = 0; i < thread_arg->row_size; ) {
@@ -508,7 +500,6 @@ int writer_thread(void* arg) {
 			bound = thread_arg->row_size;
 			int num_complete = 0;
 			for(int t = 0; t < num_threads; t++) {
-				// bound = (bound >thread_arg->thread_status[t]) ? thread_arg->thread_status[t] : bound;
 				bound = bound > thread_arg->thread_status[t] ? thread_arg->thread_status[t] : bound;
 				if (thread_arg->thread_status[t] == 1000000)
 					num_complete++;
@@ -521,9 +512,6 @@ int writer_thread(void* arg) {
 				mtx_unlock(thread_arg->mutex);
 			}
 			else if (bound <= i){ // don't have any new work
-				// mtx_unlock(thread_arg->mutex);
-				// thrd_sleep(&(struct timespec){.tv_sec=1}, NULL);
-				// continue;
 				// printf("\t\t WRITER: WAITING FOR CONDITION \n");
 				cnd_wait(thread_arg->condition_processed_row, thread_arg->mutex);
 				mtx_unlock(thread_arg->mutex);
@@ -534,75 +522,25 @@ int writer_thread(void* arg) {
 				// printf("\t\t WRITER: Leaving mutex() \n");
 				mtx_unlock(thread_arg->mutex);
 			}
-			// unsigned char conv_val;
-			// unsigned char attr_val;
-			// unsigned char conv_val2;
-			// unsigned char attr_val2;
-			
 
-			
 			for( ; i < bound+1; i++) { // process completed rows
 				int idx_conv = 0;
-				for (int j = 0; j < thread_arg->row_size; j++){ // every pixel
-					
-					
+				for (int j = 0; j < thread_arg->row_size; j++){ // every pixel					
 					unsigned char attr_val = attractors[i][j];
-
-					// unsigned char conv_val2 = convergences[i][j+1];
-					// unsigned char attr_val2 = attractors[i][j+1];
-					
-					
-					// memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
-					
 					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
-					// memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
-
+					
 					unsigned char conv_val = convergences[i][j];
 					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
 
-					// memcpy(convergence_image+idx_conv, colors_convolution[convergences[i][j]], 12);
-					// memcpy(attractor_image+idx_conv, colors_attractors[attractors[i][j]], 12);
-					
-					// fwrite((void*)colors_convolution[conv_val], sizeof(uchar), 12, file_convergence);
-					// fwrite((void*)colors_attractors[attr_val], sizeof(uchar), 12, file_attractor);
-
-					/*
-					// add newline after inserting a row
-					if (j == thread_arg->row_size -1) {
-						char * n = "\n";
-						memcpy(attractor_image+idx_conv+12, n, 2);
-						// memcpy(convergence_image+idx_conv+12, n, 2);
-						idx_conv+=2;
-					}
-					*/
 					idx_conv+=12;
-					// idx_conv+=24;
 				}
 				fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-				// fflush(file_attractor);
-
-				// int idx_conv2 = 0;
-				// for (int j = 0; j < thread_arg->row_size; j++){
-				// 	unsigned char conv_val = convergences[i][j];
-				// 	memcpy(convergence_image+idx_conv2, colors_convolution[conv_val], 12);
-				// 	idx_conv2+=12;
-				// }
-
 				fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
-				// fflush(file_convergence);
-				
 			}
 		}
 		
 	}
 	
-
-	// fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-	// fflush(file_attractor);
-
-	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
-	// fflush(file_convergence);
-
 	fclose(file_convergence);
 	fclose(file_attractor);
 }
@@ -638,11 +576,7 @@ int main(int argc, char*argv[]) {
 		printf("usage: ./newton -t -l d you need to provide 3 arguments\n");
 	}
 
-	// ------------
-	// num_rows = 1000;
-	// num_threads = 1;
-
-	// ---- hardcode mapping from #convergence iterations to ascii greyscale RGB triplets ---
+	// ------------ hardcode mapping from #convergence iterations to ascii greyscale RGB triplets ---
 	char * toWrite = "%03d %03d %03d ";
 	for(int i=0; i < 51;i++){
 		int greyscale = i*5;
@@ -651,7 +585,7 @@ int main(int argc, char*argv[]) {
 		colors_convolution[i] = s;
 	}
 
-	// ---- prepare roots ----
+	// ------------ prepare roots ----
 	for(int i = 1; i < 10; i++) {
 		double complex* zarray = (double complex *)malloc(sizeof(double complex)*i);
 		for(int j = 0; j<i; j++) {
@@ -663,7 +597,7 @@ int main(int argc, char*argv[]) {
 	uchar ** attractors = (uchar**) malloc(num_rows*sizeof(uchar*)); 
 	uchar ** convergences = (uchar**) malloc(num_rows*sizeof(uchar*)); 
 	
-	// prepare thread arguments
+	// ------------ prepare thread arguments
 	thrd_t threads[num_threads];
 	thread_argument_struct thread_args[num_threads];
 	mtx_t mutex;
@@ -714,13 +648,10 @@ int main(int argc, char*argv[]) {
 	}
 	{
 		int r;
-		// printf("\tthread.join(writer)\n");
 		thrd_join(thread_writer, &r);
-		// printf("\tthread.join(writer) JOINED\n");
 	}
 	
 	// ------------ cleanup
-	// printf("\tcleaning up mutex and free()\n");
 	mtx_destroy(&mutex);
 	cnd_destroy(&condition_processed_row);
 	// ------------
