@@ -69,86 +69,86 @@ static inline void newton(double complex z, unsigned char* attractor, unsigned c
 		
 		switch (degree) {
 		case 1:
-			double cabsreal = cabs(creal(z) - 1);
-			double cabsim = cabs(cimag(z));
-			if ( (cabsreal*cabsreal + cabsim*cabsim) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
+			// double cabsreal = cabs(creal(z) - 1);
+			// double cabsim = cabs(cimag(z));
+			// if ( (cabsreal*cabsreal + cabsim*cabsim) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
 			z = z - (z-1);
 			break;
 		case 2:
 			
-			if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
-			else if ( cabs(creal(z) + 1)*cabs(creal(z) +1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-				*attractor = 2;
-				*convergence = i;
-				found = 1;
-			}
+			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
+			// else if ( cabs(creal(z) + 1)*cabs(creal(z) +1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 2;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
 			z = z - (z*z -1)/(2*z);
 			break;
 		case 3:
 			
-			double complex delta1 = z - 1;
-			double complex delta2 = z - (-0.5 + 0.8660*I);
-			double complex delta3 = z - (-0.5 - 0.866025403*I);
-			if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
-			// if(cabs(delta2) <= 0.01){
-			// else if(creal(delta2)*creal(delta2) + cimag(delta2)*cimag(delta2) <= MIN_DIST_SQUARED){
-			else if ( (creal(z) + 0.5)*(creal(z) +0.5) + (cimag(z) - 0.866025403)*(cimag(z)-0.8660254037844388) <= MIN_DIST_SQUARED ){
-				*attractor = 2;
-				*convergence = i;//i*5;//*5;
-				found = 1;
-				// break;
-			}
-			else if ( (creal(z) + 0.5)*(creal(z) + 0.5) + (cimag(z)+0.866025403)*(cimag(z)+0.8660254037844388) <= MIN_DIST_SQUARED ){
-			// else if (cabs(delta3) <= 0.01){
-				*attractor = 3;
-				*convergence = i;//i;//*5;
-				found = 1;
-				// break;
-			}
+			// double complex delta1 = z - 1;
+			// double complex delta2 = z - (-0.5 + 0.8660*I);
+			// double complex delta3 = z - (-0.5 - 0.866025403*I);
+			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
+			// // if(cabs(delta2) <= 0.01){
+			// // else if(creal(delta2)*creal(delta2) + cimag(delta2)*cimag(delta2) <= MIN_DIST_SQUARED){
+			// else if ( (creal(z) + 0.5)*(creal(z) +0.5) + (cimag(z) - 0.866025403)*(cimag(z)-0.8660254037844388) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 2;
+			// 	*convergence = i;//i*5;//*5;
+			// 	found = 1;
+			// 	// break;
+			// }
+			// else if ( (creal(z) + 0.5)*(creal(z) + 0.5) + (cimag(z)+0.866025403)*(cimag(z)+0.8660254037844388) <= MIN_DIST_SQUARED ){
+			// // else if (cabs(delta3) <= 0.01){
+			// 	*attractor = 3;
+			// 	*convergence = i;//i;//*5;
+			// 	found = 1;
+			// 	// break;
+			// }
 			z -= (z*z*z -1)/(3*z*z);
 			break;
 		case 4:
 			z = z - (z*z*z*z -1)/(4*z*z*z);
 			break;
 		case 5:
-			if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			} else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)-0.951056516)*cabs(cimag(z)-0.951056516) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
+			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// } else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)-0.951056516)*cabs(cimag(z)-0.951056516) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
 
 
-			else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)-0.58778525)*cabs(cimag(z)-0.58778525) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
-			else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)+0.58778525)*cabs(cimag(z)+0.58778525) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
-			else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)+0.951056516)*cabs(cimag(z)+0.951056516) <= MIN_DIST_SQUARED ){
-				*attractor = 1;
-				*convergence = i;
-				found = 1;
-			}
+			// else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)-0.58778525)*cabs(cimag(z)-0.58778525) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
+			// else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)+0.58778525)*cabs(cimag(z)+0.58778525) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
+			// else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)+0.951056516)*cabs(cimag(z)+0.951056516) <= MIN_DIST_SQUARED ){
+			// 	*attractor = 1;
+			// 	*convergence = i;
+			// 	found = 1;
+			// }
 
 			z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
 			break;
@@ -170,6 +170,18 @@ static inline void newton(double complex z, unsigned char* attractor, unsigned c
 		if (found)
 			break;
 		
+		for (int root_i = 0; root_i < degree; root_i++){
+			// double delta_real = fabs(creal(x_current - roots[degree][root_i]));
+			// double delta_im = fabs(cimag(x_current - roots[degree][root_i]));
+			double delta_real = fabs(creal(z - roots[degree][root_i]));
+			double delta_im = fabs(cimag(z - roots[degree][root_i]));
+			if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+				*attractor = root_i;
+				*convergence = i;
+				found = 1;
+				break;
+			}
+		}
 	}
 	if (!found) {
 		*convergence = 50; 
@@ -345,6 +357,7 @@ int main(int argc, char*argv[]) {
 		for(int j = 0; j<i; j++) {
 			zarray[j] = cos(2.0*M_PI*j/i) + sin(2.0*M_PI*j/i)*I;
 		}
+		roots[i] = zarray;
 	}
 	
 	uchar ** attractors = (uchar**) malloc(num_rows*sizeof(uchar*)); 
