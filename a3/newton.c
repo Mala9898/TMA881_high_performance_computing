@@ -63,19 +63,18 @@ typedef struct {
 
 // }
 
-static inline void newton(double complex z, unsigned char* attractor, unsigned char* convergence, int degree) {
-	
-}
 static inline void newton(double complex zz, unsigned char* attractor, unsigned char* convergence, int degree) {
 	double complex z = zz;
 
 	*convergence = 50; 
 	*attractor = 10;
 
-	// switch (degree) {
-	// 	case 1:
-			int found = 0;
-			int i = 0;
+	int found = 0;
+	int i = 0;
+	switch (degree) {
+		case 1:
+			found = 0;
+			i = 0;
 			while(1) {
 				if (found)
 					break;
@@ -84,19 +83,15 @@ static inline void newton(double complex zz, unsigned char* attractor, unsigned 
 				double im = cimag(z);
 				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
 					*attractor = 10; 
-					*convergence = i; // bring closer to to 255 color value
+					*convergence = i;
 					found = 1;
-					// return;
-					i=50;
 					break;
 				}
 				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
 					*attractor = 10; 
 					*convergence = i;
 					found = 1;
-					i=50;
 					break;
-					// return;
 				}
 				for (int root_i = 0; root_i < degree; root_i++){
 					complex double complex_delta = z - roots[degree][root_i];
@@ -113,78 +108,306 @@ static inline void newton(double complex zz, unsigned char* attractor, unsigned 
 				z -= (z-1);
 				i++;
 			}
-			// break;
-	// 	case 2:
-	// 		z = z - (z*z -1)/(2*z);
-	// 		break;
-	// 	case 3:
-			// int found = 0;
-			// for (int i = 0; i < 50; i++) {
-			// 	if (found)
-			// 		break;
-				
-			// 	for (int root_i = 0; root_i < degree; root_i++){
-			// 		// double delta_real = fabs(creal(x_current - roots[degree][root_i]));
-			// 		// double delta_im = fabs(cimag(x_current - roots[degree][root_i]));
-					
-			// 		// BELOW WORKS
-			// 		// double delta_real = fabs(creal(z - roots[degree][root_i]));
-			// 		// double delta_im = fabs(cimag(z - roots[degree][root_i]));
-			// 		complex double complex_delta = z - roots[degree][root_i];
-			// 		double delta_real = creal(complex_delta);
-			// 		double delta_im = cimag(complex_delta);
+			break;
+		case 2:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
 
-			// 		if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
-			// 			*attractor = root_i;
-			// 			*convergence = i;
-			// 			found = 1;
-			// 			break;
-			// 		}
-			// 	}
-			// 	double re = creal(z);
-			// 	double im = cimag(z);
-			// 	if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
-			// 		*attractor = 10; 
-			// 		*convergence = i; // bring closer to to 255 color value
-			// 		found = 1;
-			// 		// return;
-			// 		i=50;
-			// 		break;
-			// 	}
-			// 	else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
-			// 		*attractor = 10; 
-			// 		*convergence = i;
-			// 		found = 1;
-			// 		i=50;
-			// 		break;
-			// 		// return;
-			// 	}
-				
-			// 	z = z - (z*z*z -1)/(3*z*z);
-			// }
-			// z = z - (z*z*z -1)/(3*z*z);
-	// 		break;
-	// 	case 4:
-	// 		z = z - (z*z*z*z -1)/(4*z*z*z);
-	// 		break;
-	// 	case 5:
-	// 		z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
-	// 		break;
-	// 	case 6:
-	// 		z = z - (z*z*z*z*z*z -1)/(6*z*z*z*z*z);
-	// 		break;
-	// 	case 7:
-	// 		z = z - (z*z*z*z*z*z*z -1)/(7*z*z*z*z*z*z);
-	// 		break;
-	// 	case 8:
-	// 		z = z - (z*z*z*z*z*z*z*z -1)/(8*z*z*z*z*z*z*z);
-	// 		break;
-	// 	case 9:
-	// 		z = z - (z*z*z*z*z*z*z*z*z -1)/(9*z*z*z*z*z*z*z*z);
-	// 		break;
-	// 	default:
-	// 		break;
-	// }
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z -= (z*z -1)/(2*z);
+				i++;
+			}
+			break;
+		case 3:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z -1)/(3*z*z);
+				i++;
+			}
+			break;
+		case 4:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z -1)/(4*z*z*z);
+				i++;
+			}
+			break;
+		case 5:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
+				i++;
+			}
+			break;
+		case 6:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z*z*z -1)/(6*z*z*z*z*z);
+				i++;
+			}
+			break;
+		case 7:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z*z*z*z -1)/(7*z*z*z*z*z*z);
+				i++;
+			}
+			break;
+		case 8:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z*z*z*z*z -1)/(8*z*z*z*z*z*z*z);
+				i++;
+			}
+			break;
+		case 9:
+			found = 0;
+			i = 0;
+			while(1) {
+				if (found)
+					break;
+
+				double re = creal(z);
+				double im = cimag(z);
+				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i; // bring closer to to 255 color value
+					found = 1;
+					break;
+				}
+				else if (re*re + im*im <= MIN_DIST_SQUARED){ // is it close to origin?
+					*attractor = 10; 
+					*convergence = i>50 ? 50 : i;;
+					found = 1;
+					break;
+				}
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i>50 ? 50 : i;;
+						found = 1;
+						break;
+					}
+				}
+				z = z - (z*z*z*z*z*z*z*z*z -1)/(9*z*z*z*z*z*z*z*z);
+				i++;
+			}
+			break;
+		default:
+			break;
+	}
 
 	
 	// if (!found) {
@@ -275,8 +498,8 @@ int writer_thread(void* arg) {
 	
 	// int idx_conv = 0;
 	int bound = thread_arg->row_size;
-	// setvbuf(file_attractor, attractor_image, _IOFBF, row_size*12);
-	// setvbuf(file_convergence, convergence_image, _IOFBF, row_size*12);
+	setvbuf(file_attractor, attractor_image, _IOFBF, row_size*12);
+	setvbuf(file_convergence, convergence_image, _IOFBF, row_size*12);
 	for(int i = 0; i < thread_arg->row_size; ) {
 		// printf("WRITER mutex.lock()\n");
 		mtx_lock(thread_arg->mutex);
@@ -334,8 +557,8 @@ int writer_thread(void* arg) {
 					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
 					// memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
 
-					// unsigned char conv_val = convergences[i][j];
-					// memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+					unsigned char conv_val = convergences[i][j];
+					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
 
 					// memcpy(convergence_image+idx_conv, colors_convolution[convergences[i][j]], 12);
 					// memcpy(attractor_image+idx_conv, colors_attractors[attractors[i][j]], 12);
@@ -356,15 +579,16 @@ int writer_thread(void* arg) {
 					// idx_conv+=24;
 				}
 				fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-				fflush(file_attractor);
+				// fflush(file_attractor);
 
-				int idx_conv2 = 0;
-				for (int j = 0; j < thread_arg->row_size; j++){
-					unsigned char conv_val = convergences[i][j];
-					memcpy(convergence_image+idx_conv2, colors_convolution[conv_val], 12);
-				}
+				// int idx_conv2 = 0;
+				// for (int j = 0; j < thread_arg->row_size; j++){
+				// 	unsigned char conv_val = convergences[i][j];
+				// 	memcpy(convergence_image+idx_conv2, colors_convolution[conv_val], 12);
+				// 	idx_conv2+=12;
+				// }
 
-				// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv2, file_convergence);
+				fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
 				// fflush(file_convergence);
 				
 			}

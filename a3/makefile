@@ -7,5 +7,5 @@ test : newton makefile
 	echo "TODO: fix makefile"
 
 clean:
-	rm -rf newton
-	echo "TODO: fix makefile"
+	rm -rf newton *.ppm extracted/ newton.tar.gz newton
+	
