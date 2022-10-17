@@ -17,6 +17,19 @@ typedef unsigned char uchar;
 char * colors_convolution[51];
 
 double complex * roots[11];
+char * colors_attractors[11] = {
+		"001 100 001 ",
+		"001 001 139 ",
+		"176 048 096 ",
+		"255 069 001 ",
+		"255 255 001 ",
+		"222 184 135 ",
+		"001 255 001 ",
+		"001 255 255 ",
+		"001 255 255 ",
+		"100 149 237 ",
+		"255 001 001 "
+	};
 /*
 output
 newton_attractors_xd.ppm  |  <-
@@ -41,115 +54,47 @@ typedef struct {
 	int row_size;
 	int* thread_status;
 	int num_threads;
+	int degree;
 	mtx_t *mutex;
 	cnd_t *condition_processed_row;
 } thread_writer_arg;
 
 static inline void newton(double complex z, unsigned char* attractor, unsigned char* convergence, int degree) {
 	double complex x_current = z;
-	*convergence = 0;
+
+	*convergence = 50; 
+	*attractor = 10;
 
 	int found = 0;
 	for (int i = 0; i < 50; i++) {
-		
-		// if (fabs(cimag(z)) > MAX_DIST || fabs(creal(z)) > MAX_DIST) { // did compution explode?
-		// 	*attractor = 0; 
-		// 	*convergence = i*5; // bring closer to to 255 color value
-		// 	break;
-		// }
-		
-		// else if (creal(z)*creal(z) + cimag(z)*cimag(z) <= MIN_DIST_SQUARED){ // is it close to origin?
 
-		// 	*attractor = 0; 
-		// 	*convergence = i*5;
-		// 	break;
-		// }
+		if (fabs(cimag(z)) > MAX_DIST || fabs(creal(z)) > MAX_DIST) { // did compution explode?
+			*attractor = 10; 
+			*convergence = i; // bring closer to to 255 color value
+			found = 1;
+			break;
+		}
+		else if (creal(z)*creal(z) + cimag(z)*cimag(z) <= MIN_DIST_SQUARED){ // is it close to origin?
+			*attractor = 10; 
+			*convergence = i;
+			found = 1;
+			break;
+		}
 
-		// x_k+1 = x_k - f(x_k)/f'(x_k)
-		
 		switch (degree) {
 		case 1:
-			// double cabsreal = cabs(creal(z) - 1);
-			// double cabsim = cabs(cimag(z));
-			// if ( (cabsreal*cabsreal + cabsim*cabsim) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
 			z = z - (z-1);
 			break;
 		case 2:
-			
-			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-			// else if ( cabs(creal(z) + 1)*cabs(creal(z) +1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 2;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
 			z = z - (z*z -1)/(2*z);
 			break;
 		case 3:
-			
-			// double complex delta1 = z - 1;
-			// double complex delta2 = z - (-0.5 + 0.8660*I);
-			// double complex delta3 = z - (-0.5 - 0.866025403*I);
-			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-			// // if(cabs(delta2) <= 0.01){
-			// // else if(creal(delta2)*creal(delta2) + cimag(delta2)*cimag(delta2) <= MIN_DIST_SQUARED){
-			// else if ( (creal(z) + 0.5)*(creal(z) +0.5) + (cimag(z) - 0.866025403)*(cimag(z)-0.8660254037844388) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 2;
-			// 	*convergence = i;//i*5;//*5;
-			// 	found = 1;
-			// 	// break;
-			// }
-			// else if ( (creal(z) + 0.5)*(creal(z) + 0.5) + (cimag(z)+0.866025403)*(cimag(z)+0.8660254037844388) <= MIN_DIST_SQUARED ){
-			// // else if (cabs(delta3) <= 0.01){
-			// 	*attractor = 3;
-			// 	*convergence = i;//i;//*5;
-			// 	found = 1;
-			// 	// break;
-			// }
-			z -= (z*z*z -1)/(3*z*z);
+			z = z - (z*z*z -1)/(3*z*z);
 			break;
 		case 4:
 			z = z - (z*z*z*z -1)/(4*z*z*z);
 			break;
 		case 5:
-			// if ( cabs(creal(z) - 1)*cabs(creal(z) - 1) + cabs(cimag(z))*cabs(cimag(z)) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// } else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)-0.951056516)*cabs(cimag(z)-0.951056516) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-
-
-			// else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)-0.58778525)*cabs(cimag(z)-0.58778525) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-			// else if ( cabs(creal(z) + 0.809016994)*cabs(creal(z) + 0.809016994) + cabs(cimag(z)+0.58778525)*cabs(cimag(z)+0.58778525) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-			// else if ( cabs(creal(z) - 0.309016994)*cabs(creal(z) - 0.309016994) + cabs(cimag(z)+0.951056516)*cabs(cimag(z)+0.951056516) <= MIN_DIST_SQUARED ){
-			// 	*attractor = 1;
-			// 	*convergence = i;
-			// 	found = 1;
-			// }
-
 			z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
 			break;
 		case 6:
@@ -184,7 +129,8 @@ static inline void newton(double complex z, unsigned char* attractor, unsigned c
 		}
 	}
 	if (!found) {
-		*convergence = 50; 
+		// *convergence = 50; 
+		// *attractor = 10;
 	}
 }
 
@@ -205,12 +151,8 @@ int worker_thread(void* arg) {
 
 		double im = -(i*(4.0/row_size) - 2.0); // map onto [-2, 2]
 		for (int j = 0; j < row_size; j++){
-			// row[j] = j%2;//i*1000 +j;//j % 256;
 			double complex z = (j*(4.0/row_size) - 2.0) + im*I;
 			newton(z, attractor+j, convergence+j, degree);
-			// if (i==999){
-			// 	printf("i=%d j=%d: %1f%+1fi\n", i,j, creal(z), cimag(z));
-			// }
 		}
 			
 		
@@ -238,15 +180,35 @@ int worker_thread(void* arg) {
 }
 int writer_thread(void* arg) {
 	const thread_writer_arg * thread_arg = (thread_writer_arg*) arg;
+	int row_size = thread_arg->row_size;
+	
 
 	int num_threads = thread_arg->num_threads;
+	
+	// attractor file
+	char *header_string = (char*)malloc(sizeof(char)*50); 
+	char *header = "P3\n%d %d\n255\n"; // TODO fix filename
+	int header_bytes = sprintf(header_string, header, thread_arg->row_size,thread_arg->row_size);
 
-	char *header = "P3\n1000 1000\n255\n"; // TODO fix filename
-	FILE *file_convergence = fopen("test.ppm", "w");
-	fwrite((void*)header, sizeof(char), 17, file_convergence);
+	char* filename_attr = (char*)malloc(sizeof(char)*50);
+	char* filename_attr_template = "newton_attractors_x%d.ppm";
+	// HERE
+	int filename_attr_bytes = sprintf(filename_attr, filename_attr_template, thread_arg->degree);
+	FILE *file_attractor = fopen(filename_attr, "w");
+	fwrite((void*)header_string, sizeof(char), header_bytes, file_attractor);
 
-	unsigned char * convergence_image = (unsigned char*) malloc(sizeof(char)*1000*1000*13);
-	int idx_conv = 0;
+	// convergence file
+	char* filename_conv = (char*)malloc(sizeof(char)*50);
+	char* filename_conv_template = "newton_convergence_x%d.ppm";
+	// HERE
+	int filename_conv_bytes = sprintf(filename_conv, filename_conv_template, thread_arg->degree);
+	FILE *file_convergence = fopen(filename_conv, "w");
+	fwrite((void*)header_string, sizeof(char), header_bytes, file_convergence);
+
+
+	uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*13);
+	uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*13);
+	long long idx_conv = 0;
 
 	long long sum = 0;
 	int bound;
@@ -291,10 +253,23 @@ int writer_thread(void* arg) {
 				for (int j = 0; j < thread_arg->row_size; j++){
 					// sum += thread_arg->matrix_results[i][j];
 					unsigned char conv_val = thread_arg->convergences[i][j];
+					unsigned char attr_val = thread_arg->attractors[i][j];
+					
 					// if (i ==0)
 					// 	printf("%d ", conv_val);
 					// idx_conv += sprintf(&convergence_image[idx_conv], "%d %d %d ", conv_val,conv_val,conv_val);
-					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+					
+					// memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
+
+					// add newline after inserting a row
+					if (j == thread_arg->row_size -1) {
+						char * n = "\n";
+						memcpy(attractor_image+idx_conv+12, n, 2);
+						// memcpy(convergence_image+idx_conv+12, n, 2);
+						idx_conv+=2;
+					}
+					// memcpy(attractor_image+idx_conv, colors_convolution[conv_val], 12);
 					idx_conv+=12;
 				}
 				
@@ -302,9 +277,13 @@ int writer_thread(void* arg) {
 		}
 		
 	}
-	fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+	fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
+	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
 	fflush(file_convergence);
+	fflush(file_attractor);
 	fclose(file_convergence);
+	fclose(file_attractor);
 	printf("⭐️ wrote %d bytes to file\n", idx_conv);
 }
 
@@ -397,6 +376,7 @@ int main(int argc, char*argv[]) {
 	thrd_t thread_writer;
 	{
 		thread_writer_arg writer_arg;
+		writer_arg.degree = degree;
 		writer_arg.attractors = attractors;
 		writer_arg.convergences = convergences;
 		writer_arg.row_size = num_rows;
@@ -423,56 +403,5 @@ int main(int argc, char*argv[]) {
 	mtx_destroy(&mutex);
 	cnd_destroy(&condition_processed_row);
 	// ------------
-
-	
-
-	// maps index to distinct colors
-	// char * color_mapping[] = {
-	// 	"0 100 0\n",
-	// 	"0 0 139\n",
-	// 	"176 48 96\n",
-	// 	"255 69 0\n",
-	// 	"255 255 0\n",
-	// 	"222 184 135\n",
-	// 	"0 255 0\n",
-	// 	"0 255 255\n",
-	// 	"0 255 255\n",
-	// 	"100 149 237\n"
-	// };
-	
-
-	// char * toWrite = "255 0 0\n";
-	// char * toWrite = "%d %d %d\n";
-	// char * toWrite = "%d %d %d\n%d %d %d\n%d %d %d\n%d %d %d\n%d %d %d\n";
-
-	// clock_t tstart = clock();
-	// for (int i = 0; i < 1000; i++) {
-	// 	// int idx = 0;
-	// 	// char * data = (char*) malloc(sizeof(char)*1000*20);
-	// 	for(int j = 0; j < 1000; j++) {
-	// 		// char * toWrite = "255 0 0\n";
-			
-	// 		// if (abs(i-j) <= 25){
-	// 		// toWrite = color_mapping[(i+j)%10]; //"0 0 255\n";
-	// 		// idx += sprintf(&data[idx], toWrite);
-	// 		// idx += sprintf(&data[idx], color_mapping[(i+j)%10]);
-					
-	// 		// } else{
-	// 		// 	// fwrite((void*)toWrite, sizeof(char), 8, file);
-	// 		// 	idx += sprintf(&data[idx], toWrite, 100,100, 100);
-	// 		// }
-	// 		// for displaying iterations
-	// 		/*
-	// 		char * toWrite = "%d %d %d\n";
-	// 		idx += sprintf(&data[idx], toWrite, num_iterations[row][column], num_iterations[row][column], num_iterations[row][column] );
-	// 		*/
-	// 		// printf("idx %d\n", idx);
-	// 	}
-	// 	// fwrite((void*)data, sizeof(char), idx, file);
-	// }
-	
-	// printf("%f for loop\n",((double)(clock() - tstart))/CLOCKS_PER_SEC);
-	// fwrite((void*)data, sizeof(char), idx, file);
-	// printf(header);
 	
 }
