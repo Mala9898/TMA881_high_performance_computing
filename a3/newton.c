@@ -12,8 +12,11 @@ typedef unsigned char uchar;
 #define MIN_DIST 0.001
 #define MIN_DIST_SQUARED 0.000001
 #define MAX_DIST 10000000000.0
+#define M_PI           3.14159265358979323846 
 
 char * colors_convolution[51];
+
+double complex * roots[11];
 /*
 output
 newton_attractors_xd.ppm  |  <-
@@ -327,6 +330,7 @@ int main(int argc, char*argv[]) {
 	// num_rows = 1000;
 	// num_threads = 1;
 
+	// ---- hardcode mapping from #convergence iterations to ascii greyscale RGB triplets ---
 	char * toWrite = "%03d %03d %03d ";
 	for(int i=0; i < 51;i++){
 		int greyscale = i*5;
@@ -334,11 +338,14 @@ int main(int argc, char*argv[]) {
 		sprintf(s, toWrite, greyscale,greyscale,greyscale);
 		colors_convolution[i] = s;
 	}
-	// printf("%s", colors_convolution[11]);
-	
 
-	// prepare roots
-
+	// ---- prepare roots ----
+	for(int i = 1; i < 10; i++) {
+		double complex* zarray = (double complex *)malloc(sizeof(double complex)*i);
+		for(int j = 0; j<i; j++) {
+			zarray[j] = cos(2.0*M_PI*j/i) + sin(2.0*M_PI*j/i)*I;
+		}
+	}
 	
 	uchar ** attractors = (uchar**) malloc(num_rows*sizeof(uchar*)); 
 	uchar ** convergences = (uchar**) malloc(num_rows*sizeof(uchar*)); 
