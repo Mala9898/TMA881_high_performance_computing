@@ -65,55 +65,56 @@ static inline void newton(double complex z, unsigned char* attractor, unsigned c
 	*convergence = 50; 
 	*attractor = 10;
 
-	// int found = 0;
+	int found = 0;
 	for (int i = 0; i < 50; i++) {
 
 		if (fabs(cimag(z)) > MAX_DIST || fabs(creal(z)) > MAX_DIST) { // did compution explode?
 			*attractor = 10; 
 			*convergence = i; // bring closer to to 255 color value
-			// found = 1;
-			return;
+			found = 1;
+			// return;
+			break;
 		}
 		else if (creal(z)*creal(z) + cimag(z)*cimag(z) <= MIN_DIST_SQUARED){ // is it close to origin?
 			*attractor = 10; 
 			*convergence = i;
-			// found = 1;
-			return;
+			found = 1;
+			// return;
 		}
 
 		switch (degree) {
 		case 1:
-			z = z - (z-1);
-			return;
+			z =  z- (z-1);
+			break;
 		case 2:
 			z = z - (z*z -1)/(2*z);
-			return;
+			break;
 		case 3:
 			z = z - (z*z*z -1)/(3*z*z);
-			return;
+			break;
 		case 4:
 			z = z - (z*z*z*z -1)/(4*z*z*z);
-			return;
+			break;
 		case 5:
 			z = z - (z*z*z*z*z -1)/(5*z*z*z*z);
-			return;
+			break;
 		case 6:
 			z = z - (z*z*z*z*z*z -1)/(6*z*z*z*z*z);
-			return;
+			break;
 		case 7:
 			z = z - (z*z*z*z*z*z*z -1)/(7*z*z*z*z*z*z);
-			return;
+			break;
 		case 8:
 			z = z - (z*z*z*z*z*z*z*z -1)/(8*z*z*z*z*z*z*z);
-			return;
+			break;
 		case 9:
 			z = z - (z*z*z*z*z*z*z*z*z -1)/(9*z*z*z*z*z*z*z*z);
-			return;
+			break;
 		default:
-			return;
+			break;
 		}
-		// if (found)
-		// 	break;
+		if (found)
+			break;
 		
 		for (int root_i = 0; root_i < degree; root_i++){
 			// double delta_real = fabs(creal(x_current - roots[degree][root_i]));
@@ -123,13 +124,13 @@ static inline void newton(double complex z, unsigned char* attractor, unsigned c
 			// double delta_real = fabs(creal(z - roots[degree][root_i]));
 			// double delta_im = fabs(cimag(z - roots[degree][root_i]));
 			complex double complex_delta = z - roots[degree][root_i];
-			double delta_real = fabs(creal(complex_delta));
-			double delta_im = fabs(cimag(complex_delta));
+			double delta_real = creal(complex_delta);
+			double delta_im = cimag(complex_delta);
 			if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
 				*attractor = root_i;
 				*convergence = i;
-				// found = 1;
-				return;
+				found = 1;
+				break;
 			}
 		}
 	}
@@ -185,6 +186,9 @@ int worker_thread(void* arg) {
 }
 int writer_thread(void* arg) {
 	const thread_writer_arg * thread_arg = (thread_writer_arg*) arg;
+
+	uchar ** attractors = thread_arg->attractors;
+	uchar ** convergences = thread_arg->convergences;
 	int row_size = thread_arg->row_size;
 	
 
@@ -211,13 +215,12 @@ int writer_thread(void* arg) {
 	fwrite((void*)header_string, sizeof(char), header_bytes, file_convergence);
 
 
-	uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*13);
-	uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*13);
+
+	uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
+	uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
 	long long idx_conv = 0;
 
-	long long sum = 0;
-	int bound;
-	bound = thread_arg->row_size;
+	int bound = thread_arg->row_size;
 	for(int i = 0; i < thread_arg->row_size; ) {
 		// printf("WRITER mutex.lock()\n");
 		mtx_lock(thread_arg->mutex);
@@ -259,20 +262,22 @@ int writer_thread(void* arg) {
 			// process completed rows
 			for( ; i < bound+1; i++) { 
 				// printf("processing row %d bound = %d\n", i, bound);
-				for (int j = 0; j < thread_arg->row_size; j+=2){
+				for (int j = 0; j < thread_arg->row_size; j+=1){
 					
-					conv_val = thread_arg->convergences[i][j];
-					attr_val = thread_arg->attractors[i][j];
+					conv_val = convergences[i][j];
+					attr_val = attractors[i][j];
 
-					conv_val2 = thread_arg->convergences[i][j+1];
-					attr_val2 = thread_arg->attractors[i][j+1];
+					// conv_val2 = convergences[i][j+1];
+					// attr_val2 = attractors[i][j+1];
 					
 					
 					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
 					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
 					
-					memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
-					memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
+					// memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
+					// memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
+					// fwrite((void*)colors_convolution[conv_val], sizeof(uchar), 12, file_convergence);
+					// fwrite((void*)colors_attractors[attr_val], sizeof(uchar), 12, file_attractor);
 
 					/*
 					// add newline after inserting a row
@@ -283,8 +288,8 @@ int writer_thread(void* arg) {
 						idx_conv+=2;
 					}
 					*/
-					// idx_conv+=12;
-					idx_conv+=24;
+					idx_conv+=12;
+					// idx_conv+=24;
 				}
 				
 			}
@@ -292,13 +297,13 @@ int writer_thread(void* arg) {
 		
 	}
 	fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-	fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
-
-	fflush(file_convergence);
 	fflush(file_attractor);
+
+	fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+	fflush(file_convergence);
+
 	fclose(file_convergence);
 	fclose(file_attractor);
-	printf("⭐️ wrote %d bytes to file\n", idx_conv);
 }
 
 
