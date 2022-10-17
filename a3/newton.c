@@ -62,6 +62,10 @@ typedef struct {
 // static inline void netwon1(double complex zz, unsigned char* attractor, unsigned char* convergence, int degree){
 
 // }
+
+static inline void newton(double complex z, unsigned char* attractor, unsigned char* convergence, int degree) {
+	
+}
 static inline void newton(double complex zz, unsigned char* attractor, unsigned char* convergence, int degree) {
 	double complex z = zz;
 
@@ -71,28 +75,11 @@ static inline void newton(double complex zz, unsigned char* attractor, unsigned 
 	// switch (degree) {
 	// 	case 1:
 			int found = 0;
-			for (int i = 0; i < 50; i++) {
-				// if (found)
-				// 	break;
-				
-				// for (int root_i = 0; root_i < degree; root_i++){
-					// double delta_real = fabs(creal(x_current - roots[degree][root_i]));
-					// double delta_im = fabs(cimag(x_current - roots[degree][root_i]));
-					
-					// BELOW WORKS
-					// double delta_real = fabs(creal(z - roots[degree][root_i]));
-					// double delta_im = fabs(cimag(z - roots[degree][root_i]));
-					complex double complex_delta = z - roots[1][0];
-					double delta_real = creal(complex_delta);
-					double delta_im = cimag(complex_delta);
+			int i = 0;
+			while(1) {
+				if (found)
+					break;
 
-					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
-						*attractor = 0;
-						*convergence = i;
-						found = 1;
-						break;
-					}
-				// }
 				double re = creal(z);
 				double im = cimag(z);
 				if (fabs(im) > MAX_DIST || fabs(re) > MAX_DIST) { // did compution explode?
@@ -111,8 +98,20 @@ static inline void newton(double complex zz, unsigned char* attractor, unsigned 
 					break;
 					// return;
 				}
-				
+				for (int root_i = 0; root_i < degree; root_i++){
+					complex double complex_delta = z - roots[degree][root_i];
+					double delta_real = creal(complex_delta);
+					double delta_im = cimag(complex_delta);
+
+					if (delta_real*delta_real + delta_im*delta_im <= MIN_DIST_SQUARED) {
+						*attractor = root_i;
+						*convergence = i;
+						found = 1;
+						break;
+					}
+				}
 				z -= (z-1);
+				i++;
 			}
 			// break;
 	// 	case 2:
@@ -274,10 +273,10 @@ int writer_thread(void* arg) {
 	// uchar * convergence_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
 	// uchar * attractor_image = (unsigned char*) malloc(sizeof(uchar)*row_size*row_size*12+1);
 	
-	int idx_conv = 0;
+	// int idx_conv = 0;
 	int bound = thread_arg->row_size;
-	setvbuf(file_attractor, attractor_image, _IOFBF, row_size*12);
-	setvbuf(file_convergence, convergence_image, _IOFBF, row_size*row_size*12);
+	// setvbuf(file_attractor, attractor_image, _IOFBF, row_size*12);
+	// setvbuf(file_convergence, convergence_image, _IOFBF, row_size*12);
 	for(int i = 0; i < thread_arg->row_size; ) {
 		// printf("WRITER mutex.lock()\n");
 		mtx_lock(thread_arg->mutex);
@@ -312,31 +311,35 @@ int writer_thread(void* arg) {
 				// printf("\t\t WRITER: Leaving mutex() \n");
 				mtx_unlock(thread_arg->mutex);
 			}
-			unsigned char conv_val;
-			unsigned char attr_val;
-			unsigned char conv_val2;
-			unsigned char attr_val2;
+			// unsigned char conv_val;
+			// unsigned char attr_val;
+			// unsigned char conv_val2;
+			// unsigned char attr_val2;
 			
 
 			
 			for( ; i < bound+1; i++) { // process completed rows
-				idx_conv = 0;
+				int idx_conv = 0;
 				for (int j = 0; j < thread_arg->row_size; j++){ // every pixel
 					
-					conv_val = convergences[i][j];
-					attr_val = attractors[i][j];
-
-					// conv_val2 = convergences[i][j+1];
-					// attr_val2 = attractors[i][j+1];
 					
-					memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+					unsigned char attr_val = attractors[i][j];
+
+					// unsigned char conv_val2 = convergences[i][j+1];
+					// unsigned char attr_val2 = attractors[i][j+1];
+					
+					
+					// memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
+					
 					memcpy(attractor_image+idx_conv, colors_attractors[attr_val], 12);
+					// memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
+
+					// unsigned char conv_val = convergences[i][j];
+					// memcpy(convergence_image+idx_conv, colors_convolution[conv_val], 12);
+
 					// memcpy(convergence_image+idx_conv, colors_convolution[convergences[i][j]], 12);
 					// memcpy(attractor_image+idx_conv, colors_attractors[attractors[i][j]], 12);
 					
-					// memcpy(convergence_image+idx_conv+12, colors_convolution[conv_val2], 12);
-					// memcpy(attractor_image+idx_conv+12, colors_attractors[attr_val2], 12);
-
 					// fwrite((void*)colors_convolution[conv_val], sizeof(uchar), 12, file_convergence);
 					// fwrite((void*)colors_attractors[attr_val], sizeof(uchar), 12, file_attractor);
 
@@ -355,8 +358,14 @@ int writer_thread(void* arg) {
 				fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
 				fflush(file_attractor);
 
-				fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
-				fflush(file_convergence);
+				int idx_conv2 = 0;
+				for (int j = 0; j < thread_arg->row_size; j++){
+					unsigned char conv_val = convergences[i][j];
+					memcpy(convergence_image+idx_conv2, colors_convolution[conv_val], 12);
+				}
+
+				// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv2, file_convergence);
+				// fflush(file_convergence);
 				
 			}
 		}
@@ -364,11 +373,11 @@ int writer_thread(void* arg) {
 	}
 	
 
-	fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
-	fflush(file_attractor);
+	// fwrite((void*)attractor_image, sizeof(unsigned char), idx_conv, file_attractor);
+	// fflush(file_attractor);
 
-	fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
-	fflush(file_convergence);
+	// fwrite((void*)convergence_image, sizeof(unsigned char), idx_conv, file_convergence);
+	// fflush(file_convergence);
 
 	fclose(file_convergence);
 	fclose(file_attractor);
