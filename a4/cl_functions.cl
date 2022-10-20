@@ -1,8 +1,8 @@
 __kernel void vec_add(__global const double *box1,
 						__global double *box2,
-						int rows,
-						int cols,
-						const double diffconstant) {
+						__const int rows,
+						__const int cols,
+						__const double diffconstant) {
 
 	// get indices
 	int i = get_global_id(0);
@@ -48,7 +48,7 @@ __kernel void reduction(__global double *box,
 
 __kernel void absdiff(__global double * box,
 					  __const double avg,
-					  const int cols) {
+					  __const int cols) {
 
 	int i = get_global_id(0);
 	int j = get_global_id(1);

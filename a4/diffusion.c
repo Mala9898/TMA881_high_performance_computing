@@ -17,8 +17,10 @@ int main(int argc, char*argv[]) {
 
 	start = clock();
 
+	// -----------------------------------
+	//           program arguments 
+	// -----------------------------------
 	int opt;
-
 	int num_iterations = -1;
 	double diff_constant = -1.0;
 	while((opt = getopt(argc, argv, "n:d:")) != -1) {
@@ -35,9 +37,11 @@ int main(int argc, char*argv[]) {
 		printf("usage: ./newton -n <iterations> -d <diffusion constant> \n");
 		return -1;
 	}
-	printf("%d %f \n", num_iterations, diff_constant);
 
-	// ----------- read file
+
+	// -----------------------------------
+	//   read initial temperature values 
+	// -----------------------------------
 	FILE *file = fopen("init", "r");
 	if(file==NULL) {
 	 	printf("ERROR: could not find file init...\n");
@@ -46,7 +50,7 @@ int main(int argc, char*argv[]) {
 	int rows = 0;
 	int cols = 0;
 	fscanf(file, "%d %d\n", &rows, &cols);
-	printf("box [%d x %d]\n", rows,cols);
+	// printf("box [%d x %d]\n", rows,cols);
 	double * box1 = (double*) malloc(rows*cols*sizeof(double));
 	double * box2 = (double*) malloc(rows*cols*sizeof(double));
 	int x;
@@ -56,9 +60,7 @@ int main(int argc, char*argv[]) {
 		// printf(" x y v = %d %d %lf\n", x, y, val);
 		box1[x*cols + y] = val;
 	}
-	// for(int i = 0; i< rows*cols; i++){
-	// 	printf("i=%d val = %f\n", starting_grid[i]);
-	// }
+	
 	fclose(file);
 
 	// ----------- open cl config
@@ -73,13 +75,14 @@ int main(int argc, char*argv[]) {
 	// ---- Martin's device loader (picks the overworked GPU)------
 	cl_device_id device_id;
 	cl_uint nmb_devices;
-	printf("# GPUs = %d\n", nmb_devices);
+	// printf("# GPUs = %d\n", nmb_devices);
 	if ( clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &nmb_devices) != CL_SUCCESS ) {
 		fprintf(stderr, "cannot get device\n" );
 		return 1;
 	}
 
 	// <device loader from youtube OpenCL tutorial>
+	// -> I load the 2nd GPU because the 1st one is under HEAVY LOAD all the time!
 	// https://github.com/NoNumberMan/OpenCLTutorial/blob/main/main.cpp
 	cl_platform_id platforms[64];
 	unsigned int platformCount;
@@ -98,10 +101,8 @@ int main(int argc, char*argv[]) {
 				size_t vendorNameLength;
 				cl_int deviceInfoResult = clGetDeviceInfo( devices[j], CL_DEVICE_VENDOR, 256, vendorName, &vendorNameLength );
 				if ( deviceInfoResult == CL_SUCCESS) {
-					printf("SUCCESS DEVICE: %s\n", vendorName);
-					// device = devices[j];
 					foundGpus++;
-					if (foundGpus == 2){
+					if (foundGpus == 2){      // <----- USE 2ND GPU!!!!!
 						device_id = devices[j];
 					}
 				}
@@ -163,7 +164,7 @@ int main(int argc, char*argv[]) {
 		free(log);
 		return 1;
 	}
-	// -------- setup kernel-----------
+	// -------- setup kernels -----------
 	cl_kernel kernel = clCreateKernel(program, "vec_add", &error);
 	assert(error == CL_SUCCESS );
 	cl_kernel kernel_reduction = clCreateKernel(program, "reduction", &error);
@@ -172,33 +173,30 @@ int main(int argc, char*argv[]) {
 	assert(error == CL_SUCCESS );
 
 	// ---------- prepare data
-	cl_int vecaResult;
-	cl_int vecbResult;
-	cl_int veccResult;
+	cl_int box1Result;
+	cl_int box2Result;
 
-	cl_mem buffer_box1 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &vecaResult );
-	cl_mem buffer_box2 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &vecbResult );
-	assert( vecaResult == CL_SUCCESS );
-	assert( vecbResult == CL_SUCCESS );
+	cl_mem buffer_box1 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &box1Result );
+	cl_mem buffer_box2 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &box2Result );
+	assert( box1Result == CL_SUCCESS );
+	assert( box2Result == CL_SUCCESS );
 	
-	cl_int enqueueVecaResult = clEnqueueWriteBuffer( command_queue, buffer_box1, CL_TRUE, 0, rows*cols * sizeof( double ), box1, 0, NULL, NULL );
-	cl_int enqueueVecbResult = clEnqueueWriteBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols * sizeof( double ), box2, 0, NULL, NULL );
-	assert( enqueueVecaResult == CL_SUCCESS );
-	assert( enqueueVecbResult == CL_SUCCESS );
+	cl_int enqueueBox1Result = clEnqueueWriteBuffer( command_queue, buffer_box1, CL_TRUE, 0, rows*cols * sizeof( double ), box1, 0, NULL, NULL );
+	cl_int enqueueBox2Result = clEnqueueWriteBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols * sizeof( double ), box2, 0, NULL, NULL );
+	assert( enqueueBox1Result == CL_SUCCESS );
+	assert( enqueueBox2Result == CL_SUCCESS );
 
 	
-	// cl_mem vecc = clCreateBuffer( context, CL_MEM_WRITE_ONLY, 8 * sizeof( float ), NULL, &veccResult );
-	// assert( veccResult == CL_SUCCESS );
 
 	// ----- configure execution
 	const size_t globalWorkSize[] = {rows, cols};
-	const size_t localWorkSize[] = {1,1}; 
-	// size_t localWorkSize[] = {1,1}; 
+	// const size_t localWorkSize[] = {1,1}; 
+	size_t localWorkSize[] = {1,1}; 
 	// const size_t localWorkSize2[] = {rows/10,cols/10};
-	// if (rows >= 10 && cols >= 10 && rows % 10 == 0 && cols % 10 == 0) {
-	// 	localWorkSize[0] = rows/10;
-	// 	localWorkSize[1] = cols/10;
-	// }
+	if (rows >= 10 && cols >= 10 && rows % 10 == 0 && cols % 10 == 0) {
+		localWorkSize[0] = rows/10;
+		localWorkSize[1] = cols/10;
+	}
 		 
 	// const size_t localWorkSize[] = {rows/10,cols/10}; 
 	// size_t localWorkSize = 1;
@@ -228,18 +226,16 @@ int main(int argc, char*argv[]) {
 	
 
 
-	printf("PASS iterations  complete.\n");
+	// find which box we wrote the last iteration into
 	double * box_pass1 = NULL;
 	cl_mem buffer_box_pass1;
 	if (num_iterations %2 == 0){
-		printf("box1\n");
 		cl_int enqueueReadBufferResult = clEnqueueReadBuffer( command_queue, buffer_box1, CL_TRUE, 0, rows*cols*sizeof(double), box1, 0, NULL, NULL );
 		assert( enqueueReadBufferResult == CL_SUCCESS );
 		box_pass1 = box1;
 		buffer_box_pass1 = buffer_box1;
 	}
 	else{
-		printf("box2\n");
 		cl_int enqueueReadBufferResult = clEnqueueReadBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols*sizeof(double), box2, 0, NULL, NULL );
 		assert( enqueueReadBufferResult == CL_SUCCESS );
 		box_pass1 = box2;	
@@ -253,6 +249,7 @@ int main(int argc, char*argv[]) {
   	const int local_redsz = 32;
   	const int nmb_redgps = global_redsz / local_redsz;
 
+	// create buffer in GPU memory to store partial sums
 	cl_mem buffer_output = clCreateBuffer(context, CL_MEM_WRITE_ONLY,nmb_redgps*sizeof(double), NULL, &error);
 	
 	const cl_int sz_clint = (cl_int)rows*cols;
@@ -267,6 +264,7 @@ int main(int argc, char*argv[]) {
 			kernel_reduction, 1, NULL, (const size_t *) &global_redsz_szt, (const size_t *) &local_redsz_szt,
 			0, NULL, NULL);
 
+	// pull reduced sums from GPU and add them up.
 	double *c_sum = malloc(nmb_redgps*sizeof(double));
 	clEnqueueReadBuffer(command_queue,buffer_output, CL_TRUE, 0, nmb_redgps*sizeof(double), c_sum, 0, NULL, NULL);
 	assert(clFinish(command_queue) == CL_SUCCESS );
@@ -276,11 +274,12 @@ int main(int argc, char*argv[]) {
 		c_sum_total += c_sum[ix];
 
 	double computed_average = c_sum_total / (double)(rows*cols);
-	printf("✅computer average: %lf\n", computed_average);
+	printf("computed average: %e\n", computed_average);
 
 	// -----------------------------------
 	//           ABS DIFFERENCE
 	// -----------------------------------
+
 	clSetKernelArg(kernel_absdiff, 0, sizeof(cl_mem), &buffer_box_pass1);
 	clSetKernelArg(kernel_absdiff, 1, sizeof(cl_double), &computed_average);
 	clSetKernelArg(kernel_absdiff, 2, sizeof(cl_int), &cols);
@@ -291,6 +290,8 @@ int main(int argc, char*argv[]) {
 	// -----------------------------------
 	//       AVERAGE ABS DIFFERENCE
 	// -----------------------------------
+
+	// re-use the reduction opencl function from above to add up all the values from the absolute diff matrix.
 	clEnqueueNDRangeKernel(command_queue,
 			kernel_reduction, 1, NULL, (const size_t *) &global_redsz_szt, (const size_t *) &local_redsz_szt,
 			0, NULL, NULL);
@@ -305,28 +306,12 @@ int main(int argc, char*argv[]) {
 		sum_abs_diff += reduced_abs_diff[i];
 	sum_abs_diff /= (rows*cols);
 
-	printf("✅ average abs diff = %lf \n", sum_abs_diff);
-
-	// for(int i =0; i< rows*cols;i++){
-	// 	printf("%5lf ", i, box_pass1[i]);
-		
-	// 	if ((i+1)%cols == 0 && i != 0)
-	// 		printf("\n");
-	// }
-
-	
-     
-     
-	// double a = box_pass1[0];
-	// for(int i = 1; i < rows*cols; i++){
-	// 	a = (box_pass1[i] + i*a)/(i+1);
-	// }
-	// printf("avg = %lf\n", a);
+	printf("average abs diff = %e \n", sum_abs_diff);
 
 
 	end = clock();
 	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("\t TIME =  %lf \n", cpu_time_used);
+	printf("TIME =  %lf seconds\n", cpu_time_used);
 	
-	printf("✅ program finished..\n");
+	// printf("✅ program finished..\n");
 }

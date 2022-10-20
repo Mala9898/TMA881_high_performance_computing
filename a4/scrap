@@ -80,11 +80,11 @@ reduction(__global float *c,
   int group_size = get_global_size(0); // 0...1024
 //   int gix = get_global_id(0);
 
-  int local_size = get_local_size(0);
+  int local_size = get_local_size(0); // 24
   int local_i = get_local_id(0);
 
   float acc = 0;
-  for ( int cix = get_global_id(0); cix < total_size; cix += group_size )
+  for ( int cix = get_global_id(0); cix < total_size; cix += group_size ) // increment by 1024
     acc += c[cix];
 
   partial_sums[local_i] = acc;

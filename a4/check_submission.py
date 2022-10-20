@@ -42,10 +42,12 @@ def check_runtime(width, height, d, n, path, time_bd, repeat):
       if time > time_bd:
         print("TOO SLOW ({} ms) FOR {} ON init_{}_{}"
               .format(time, diffusion_cmd, width, height))
+        print(f"took {time}. goal = {time_bd}")
         return False
       else:
         return True
   except:
+    print("\t err X1")
     pass
 
   print("RUNTIME ERROR FOR {} ON init_{}_{}".format(diffusion_cmd, width, height))
@@ -84,7 +86,7 @@ def run_check_runtime():
   return check_runtimes(extraction_path)
 
 
-
+print("✅STARTING")
 subprocess.run(["mkdir", "-p", "extracted"])
 
 parser = argparse.ArgumentParser()
