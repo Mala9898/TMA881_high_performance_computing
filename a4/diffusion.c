@@ -4,32 +4,38 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
 
+clock_t start, end;
+double cpu_time_used; 
 
 
 int main(int argc, char*argv[]) {
+
+	
+
 	int opt;
 
-	int iterations = -1;
+	int num_iterations = -1;
 	double diff_constant = -1.0;
 	while((opt = getopt(argc, argv, "n:d:")) != -1) {
 		switch (opt) {
 		case 'n':
-			iterations= atoi(optarg);
+			num_iterations= atoi(optarg);
 			break;
 		case 'd':
 			diff_constant = atof(optarg);
 			break;
 		}
 	}
-	if (iterations < 0 || diff_constant < 0){
+	if (num_iterations < 0 || diff_constant < 0){
 		printf("usage: ./newton -n <iterations> -d <diffusion constant> \n");
 		return -1;
 	}
-	printf("%d %f \n", iterations, diff_constant);
+	printf("%d %f \n", num_iterations, diff_constant);
 
 	// ----------- read file
 	FILE *file = fopen("init", "r");
@@ -40,6 +46,7 @@ int main(int argc, char*argv[]) {
 	int rows = 0;
 	int cols = 0;
 	fscanf(file, "%d %d\n", &rows, &cols);
+	printf("box [%d x %d]\n", rows,cols);
 	double * box1 = (double*) malloc(rows*cols*sizeof(double));
 	double * box2 = (double*) malloc(rows*cols*sizeof(double));
 	int x;
@@ -47,7 +54,7 @@ int main(int argc, char*argv[]) {
 	double val;
 	while(fscanf(file, "%d %d %lf", &x, &y, &val) != EOF) {
 		// printf(" x y v = %d %d %lf\n", x, y, val);
-		box1[x*rows + y] = val;
+		box1[x*cols + y] = val;
 	}
 	// for(int i = 0; i< rows*cols; i++){
 	// 	printf("i=%d val = %f\n", starting_grid[i]);
@@ -81,6 +88,7 @@ int main(int argc, char*argv[]) {
 	assert(error == CL_SUCCESS );
 
 	
+	
 	char *opencl_program_src;
 	{
 		FILE *clfp = fopen("./cl_functions.cl", "r");
@@ -96,6 +104,8 @@ int main(int argc, char*argv[]) {
 		opencl_program_src[clfsz] = 0;
 		fclose(clfp);
 	}
+
+	
 	
 	cl_program program;
 	size_t src_len = strlen(opencl_program_src);
@@ -139,12 +149,12 @@ int main(int argc, char*argv[]) {
 	cl_int vecbResult;
 	cl_int veccResult;
 
-	cl_mem buffer_box1 = clCreateBuffer( context, CL_MEM_READ_ONLY, rows*cols * sizeof( double ), NULL, &vecaResult );
+	cl_mem buffer_box1 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &vecaResult );
 	assert( vecaResult == CL_SUCCESS );
 	cl_int enqueueVecaResult = clEnqueueWriteBuffer( command_queue, buffer_box1, CL_TRUE, 0, rows*cols * sizeof( double ), box1, 0, NULL, NULL );
 	assert( enqueueVecaResult == CL_SUCCESS );
 	
-	cl_mem buffer_box2 = clCreateBuffer( context, CL_MEM_WRITE_ONLY, rows*cols * sizeof( double ), NULL, &vecbResult );
+	cl_mem buffer_box2 = clCreateBuffer( context, CL_MEM_READ_WRITE, rows*cols * sizeof( double ), NULL, &vecbResult );
 	assert( vecbResult == CL_SUCCESS );
 	cl_int enqueueVecbResult = clEnqueueWriteBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols * sizeof( double ), box2, 0, NULL, NULL );
 	assert( enqueueVecbResult == CL_SUCCESS );
@@ -154,36 +164,69 @@ int main(int argc, char*argv[]) {
 	// assert( veccResult == CL_SUCCESS );
 
 	// ----- configure execution
-	cl_int kernelArgaResult = clSetKernelArg( kernel, 0, sizeof(cl_mem), &buffer_box1 );
-	assert( kernelArgaResult == CL_SUCCESS );
-	cl_int kernelArgbResult = clSetKernelArg( kernel, 1, sizeof(cl_mem), &buffer_box2 );
-	assert( kernelArgaResult == CL_SUCCESS );
-	cl_int arg3 = clSetKernelArg(kernel, 2, sizeof(int), &rows);
-  	cl_int arg4 = clSetKernelArg(kernel, 3, sizeof(int), &cols);
-	cl_int arg5 = clSetKernelArg(kernel, 4, sizeof(double), &diff_constant);
-	assert( arg3 == CL_SUCCESS );
-	assert( arg4 == CL_SUCCESS );
-
-	// size_t globalWorkSize = rows*cols;
 	const size_t globalWorkSize[] = {rows, cols};
-	size_t localWorkSize = 1;
-	// cl_int enqueueKernelResult = clEnqueueNDRangeKernel( command_queue, kernel, 1, 0, &globalWorkSize, &localWorkSize, 0, NULL, NULL );
-	cl_int enqueueKernelResult = clEnqueueNDRangeKernel( command_queue, kernel, 2, 0, (const size_t *)&globalWorkSize, NULL, 0, NULL, NULL );
-	assert( enqueueKernelResult == CL_SUCCESS );
+	size_t localWorkSize = 10;
 
-	// float veccData[8];
-	cl_int enqueueReadBufferResult = clEnqueueReadBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols*sizeof(double), box2, 0, NULL, NULL );
-	assert( enqueueReadBufferResult == CL_SUCCESS );
+	cl_int arg3 = clSetKernelArg(kernel, 2, sizeof(int), &rows);
+	cl_int arg4 = clSetKernelArg(kernel, 3, sizeof(int), &cols);
+	cl_int arg5 = clSetKernelArg(kernel, 4, sizeof(double), &diff_constant);
 
-	clFinish( command_queue );
+	start = clock();
+
+	for(int i = 0; i< num_iterations; i++) {
+		cl_int arg1 = clSetKernelArg(kernel, i%2 == 0 ? 0 : 1, sizeof(cl_mem), &buffer_box1 );
+		cl_int arg2 = clSetKernelArg(kernel, i%2 == 0 ? 1 : 0, sizeof(cl_mem), &buffer_box2 );
+		
+		// cl_int enqueueKernelResult = clEnqueueNDRangeKernel( command_queue, kernel, 1, 0, &globalWorkSize, &localWorkSize, 0, NULL, NULL );
+		cl_int enqueueKernelResult = clEnqueueNDRangeKernel( command_queue, kernel, 2, 0, (const size_t *)&globalWorkSize, &localWorkSize, 0, NULL, NULL );
+		assert( enqueueKernelResult == CL_SUCCESS );
+
+
+		clFinish( command_queue );
+		// printf("iteration i=%d done.\n", i);
+	}
+
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("\t TIME =  %lf \n", cpu_time_used);
+
+	
+
+	
+	
 
 	printf("GPU work done.\n");
-
-	for(int i =0; i< rows*cols;i++){
-		printf("%5lf ", i, box2[i]);
-		if ((i+1)%cols == 0 && i != 0)
-			printf("\n");
+	double * box_pass1 = NULL;
+	if (num_iterations %2 == 0){
+		printf("box1\n");
+		cl_int enqueueReadBufferResult = clEnqueueReadBuffer( command_queue, buffer_box1, CL_TRUE, 0, rows*cols*sizeof(double), box1, 0, NULL, NULL );
+		assert( enqueueReadBufferResult == CL_SUCCESS );
+		box_pass1 = box1;
 	}
+	else{
+		printf("box2\n");
+		cl_int enqueueReadBufferResult = clEnqueueReadBuffer( command_queue, buffer_box2, CL_TRUE, 0, rows*cols*sizeof(double), box2, 0, NULL, NULL );
+		assert( enqueueReadBufferResult == CL_SUCCESS );
+		box_pass1 = box2;
+		
+	}
+	// for(int i =0; i< rows*cols;i++){
+	// 	printf("%5lf ", i, box_pass1[i]);
+		
+	// 	if ((i+1)%cols == 0 && i != 0)
+	// 		printf("\n");
+	// }
+
+	
+     
+     
+	// double a = box_pass1[0];
+	// for(int i = 1; i < rows*cols; i++){
+	// 	a = (box_pass1[i] + i*a)/(i+1);
+	// }
+	// printf("avg = %lf\n", a);
+
+
 	
 	printf("✅ program finished..\n");
 }
