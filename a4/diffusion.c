@@ -15,7 +15,7 @@ double cpu_time_used;
 
 int main(int argc, char*argv[]) {
 
-	
+	start = clock();
 
 	int opt;
 
@@ -192,16 +192,22 @@ int main(int argc, char*argv[]) {
 
 	// ----- configure execution
 	const size_t globalWorkSize[] = {rows, cols};
-	// const size_t localWorkSize[] = {1,1}; 
-	// const size_t localWorkSize[] = {5,5}; 
-	const size_t localWorkSize[] = {rows/10,cols/10}; 
+	const size_t localWorkSize[] = {1,1}; 
+	// size_t localWorkSize[] = {1,1}; 
+	// const size_t localWorkSize2[] = {rows/10,cols/10};
+	// if (rows >= 10 && cols >= 10 && rows % 10 == 0 && cols % 10 == 0) {
+	// 	localWorkSize[0] = rows/10;
+	// 	localWorkSize[1] = cols/10;
+	// }
+		 
+	// const size_t localWorkSize[] = {rows/10,cols/10}; 
 	// size_t localWorkSize = 1;
 
 	cl_int arg3 = clSetKernelArg(kernel, 2, sizeof(int), &rows);
 	cl_int arg4 = clSetKernelArg(kernel, 3, sizeof(int), &cols);
 	cl_int arg5 = clSetKernelArg(kernel, 4, sizeof(double), &diff_constant);
 
-	start = clock();
+	
 
 	for(int i = 0; i< num_iterations; i++) {
 		// if (i%1000 == 0)
@@ -219,9 +225,7 @@ int main(int argc, char*argv[]) {
 		// printf("iteration i=%d done.\n", i);
 	}
 
-	end = clock();
-	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("\t TIME =  %lf \n", cpu_time_used);
+	
 
 
 	printf("PASS iterations  complete.\n");
@@ -320,6 +324,9 @@ int main(int argc, char*argv[]) {
 	// printf("avg = %lf\n", a);
 
 
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("\t TIME =  %lf \n", cpu_time_used);
 	
 	printf("✅ program finished..\n");
 }

@@ -1,9 +1,9 @@
 .PHONY : clean test
 
-newton : diffusion.c makefile
+diffusion : diffusion.c makefile
 	gcc -o diffusion diffusion.c -lm -lOpenCL -O2 -g
 
-test : newton makefile
+test : diffusion makefile
 	tar -czvf diffusion.tar.gz diffusion.c makefile
 	echo "built archive...\n\n"
 	./check_submission.py diffusion.tar.gz
