@@ -1,0 +1,104 @@
+#include <stdio.h>
+#include <stddef.h>
+#include <string.h>
+#define CL_TARGET_OPENCL_VERSION 300
+#include <CL/cl.h>
+
+int
+main()
+{
+  
+
+  const int sz = 10000000;
+  const int global_redsz = 1024;
+  const int local_redsz = 32;
+  const int nmb_redgps = global_redsz / local_redsz;
+
+  cl_mem input_buffer_a, input_buffer_b, output_buffer_c, output_buffer_c_sum;
+  input_buffer_a = clCreateBuffer(context, CL_MEM_READ_ONLY, sz*sizeof(float), NULL, &error);
+  input_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY, sz*sizeof(float), NULL, &error);
+  output_buffer_c = clCreateBuffer(context, CL_MEM_READ_WRITE, sz*sizeof(float), NULL, &error);
+  output_buffer_c_sum = clCreateBuffer(context, CL_MEM_WRITE_ONLY, nmb_redgps*sizeof(float), NULL, &error);
+  
+
+  float *a = malloc(sz*sizeof(float));
+  float *b = malloc(sz*sizeof(float));
+  for ( int ix = 0; ix < sz; ++ix ) {
+    a[ix] = ix;
+    b[ix] = ix;
+  }
+  clEnqueueWriteBuffer(command_queue, input_buffer_a, CL_TRUE, 0, sz*sizeof(float), a, 0, NULL, NULL)
+  
+  clEnqueueWriteBuffer(command_queue,input_buffer_b, CL_TRUE, 0, sz*sizeof(float), b, 0, NULL, NULL)
+  clSetKernelArg(kernel_dot_prod_mul, 0, sizeof(cl_mem), &input_buffer_a);
+  clSetKernelArg(kernel_dot_prod_mul, 1, sizeof(cl_mem), &input_buffer_b);
+  clSetKernelArg(kernel_dot_prod_mul, 2, sizeof(cl_mem), &output_buffer_c);
+  
+  const size_t global_sz_szt = (size_t) sz;
+  clEnqueueNDRangeKernel(command_queue, kernel_dot_prod_mul,1, NULL, (const size_t*) &global_sz_szt, NULL, 0, NULL, NULL)
+       
+  // This barrier appears only for the purpose of demonstration. We are working
+  // with and in-order command queue, so that it is implied by the enqueue
+  // commands.
+  clEnqueueBarrierWithWaitList(command_queue, 0, NULL, NULL) != CL_SUCCESS ) 
+  
+  const cl_int sz_clint = (cl_int)sz;
+  clSetKernelArg(kernel_reduction, 0, sizeof(cl_mem), &output_buffer_c);
+  clSetKernelArg(kernel_reduction, 1, local_redsz*sizeof(float), NULL);
+  clSetKernelArg(kernel_reduction, 2, sizeof(cl_int), &sz_clint);
+  clSetKernelArg(kernel_reduction, 3, sizeof(cl_mem), &output_buffer_c_sum);
+
+  size_t global_redsz_szt = (size_t) global_redsz;
+  size_t local_redsz_szt = (size_t) local_redsz;
+  clEnqueueNDRangeKernel(command_queue,
+           kernel_reduction, 1, NULL, (const size_t *) &global_redsz_szt, (const size_t *) &local_redsz_szt,
+           0, NULL, NULL)
+   
+
+  float *c_sum = malloc(nmb_redgps*sizeof(float));
+  clEnqueueReadBuffer(command_queue,
+           output_buffer_c_sum, CL_TRUE, 0, nmb_redgps*sizeof(float), c_sum, 0, NULL, NULL)
+  
+
+  clFinish(command_queue) != CL_SUCCESS )
+  
+
+  float c_sum_total = 0.f;
+  for (size_t ix = 0; ix < nmb_redgps; ++ix)
+    c_sum_total += c_sum[ix];
+
+  printf("Dot product equals %f\n", c_sum_total);
+  
+__kernel
+void
+reduction(__global float *c,
+  __local float *partial_sums,
+  __const int total_size,
+  __global float *result
+  )
+{
+  int group_size = get_global_size(0); // 0...1024
+//   int gix = get_global_id(0);
+
+  int local_size = get_local_size(0);
+  int local_i = get_local_id(0);
+
+  float acc = 0;
+  for ( int cix = get_global_id(0); cix < total_size; cix += group_size )
+    acc += c[cix];
+
+  partial_sums[local_i] = acc;
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  for(int offset = local_size/2; offset > 0; offset /= 2) {
+    if ( local_i < offset )
+      partial_sums[local_i] += partial_sums[local_i+offset];
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  if ( local_i == 0 )
+    result[get_group_id(0)] = partial_sums[0];
+}
+
+  return 0;
+}
