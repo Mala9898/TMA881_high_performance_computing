@@ -108,6 +108,7 @@ int main(int argc, char*argv[]) {
 		// DEBUG BOX CREATOR
 		// ----------------
 		
+		/*
 		cols = 10;
 		rows = 10;
 		// box1 = (float*)malloc((rows+OFFSET_2)*(cols+OFFSET_2)*sizeof(float));
@@ -120,13 +121,16 @@ int main(int argc, char*argv[]) {
 			}
 		}
 		printf("<CREATED DATA>\n");
-		for (int i = 0; i < rows + OFFSET_2; i++) {
-			for (int j = 0; j < cols + OFFSET_2; j++) {
-				printf("%.0f ", box1[i*(cols+OFFSET_2) + j]);
-			}	
-			printf("\n");
-		}
-		printf("</CREATED DATA>\n");
+
+		*/
+
+		// for (int i = 0; i < rows + OFFSET_2; i++) {
+		// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+		// 		printf("%.0f ", box1[i*(cols+OFFSET_2) + j]);
+		// 	}	
+		// 	printf("\n");
+		// }
+		// printf("</CREATED DATA>\n");
 		
 
 		
@@ -145,9 +149,11 @@ int main(int argc, char*argv[]) {
 		// }
 	}
 	
-	// ---------------------------------------------------
-	//                 Case 1: only 1 node
-	// ---------------------------------------------------
+	// 🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨
+	// 
+	//                Case 1: one node
+	// 
+	// 🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨
 	if (mpi_rank==0 && number_workers == 1) {
 		float * input_box = box1;
 		float * output_box = box2;
@@ -227,9 +233,11 @@ int main(int argc, char*argv[]) {
 		
 	} 
 	
-	// ---------------------------------------------------
+	// 🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨
+	// 
 	//            Case 2: more than one node
-	// ---------------------------------------------------
+	// 
+	// 🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨
 	else {
 	// 	// printf("rows= %d\n", rows);
 	// 	int accumulator;
@@ -249,7 +257,7 @@ int main(int argc, char*argv[]) {
 		float * temp;
 		
 		// float * local_box1 = (float*) malloc(sizeof(float) * (cols+OFFSET_2)*(rows_per_worker+OFFSET_2+100) );
-		printf("row_per_worker = %d, local box size = %d\n", rows_per_worker, (cols+OFFSET_2)*(rows_per_worker+OFFSET_2));
+		// printf("row_per_worker = %d, local box size = %d\n", rows_per_worker, (cols+OFFSET_2)*(rows_per_worker+OFFSET_2));
 
 		for(int worker = 0; worker < number_workers; worker++) {
 			if (worker != number_workers - 1){
@@ -266,8 +274,8 @@ int main(int argc, char*argv[]) {
 					lengths[worker] = rows - worker*rows_per_worker;
 				}
 			}
-			printf("start   %d = %d\n", worker, starts[worker]);
-			printf("lengths %d = %d\n", worker, lengths[worker]);
+			// printf("start   %d = %d\n", worker, starts[worker]);
+			// printf("lengths %d = %d\n", worker, lengths[worker]);
 		}
 
 		// -------------
@@ -277,14 +285,14 @@ int main(int argc, char*argv[]) {
 			// create local chunk for master first. include row above and below
 			memcpy(local_box1, box1, (lengths[0]+OFFSET_2)*(cols+OFFSET_2)*sizeof(float) ); // destiantion , source, num
 
-			printf("--------MASTER NODE LOCAL: (num items copied = %d)---------\n", (lengths[0]+OFFSET_2)*(cols+OFFSET_2));
-			for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
-				for (int j = 0; j < cols + OFFSET_2; j++) {
-					printf("%.0f ", local_box1[i*(cols+OFFSET_2) + j]);
-				}	
-				printf("\n");
-			}
-			printf("----------END OF MASTER MATRIX-------\n");
+			// printf("--------MASTER NODE LOCAL: (num items copied = %d)---------\n", (lengths[0]+OFFSET_2)*(cols+OFFSET_2));
+			// for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+			// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+			// 		printf("%.0f ", local_box1[i*(cols+OFFSET_2) + j]);
+			// 	}	
+			// 	printf("\n");
+			// }
+			// printf("----------END OF MASTER MATRIX-------\n");
 
 			// send out chunks across nodes
 			for (int worker = 1; worker < number_workers; worker++){
@@ -300,7 +308,7 @@ int main(int argc, char*argv[]) {
 					worker,         // tag
 					MPI_COMM_WORLD 
 				);
-				printf("sent out chunk to %d worker from master\n", worker);
+				// printf("sent out chunk to %d worker from master\n", worker);
 			} 
 
 			float left;
@@ -364,14 +372,44 @@ int main(int argc, char*argv[]) {
 				// printf("\n");
 
 			}
-
+			
+				
+			// printf("✅ --- FIRST CHUNK ---- :\n");
+			// for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+			// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+			// 		printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+			// 	}	
+			// 	printf("\n");
+			// }
+			
+			// <---------- 🟨 compute average ---------->
+			float sum_partial = 0;
+			for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+				for(int j = 1; j < cols+OFFSET; j++) {
+					sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
+				}	
+			}
+			// printf("partial 1st %f\n", sum_partial);
+			float sum_global = 0;
+			MPI_Allreduce(&sum_partial, &sum_global, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+			float average = sum_global/(rows*cols);
+			// <---------- 🟨 compute average absolute difference ---------->
+			float sum_partial_diff = 0;
+			for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+				for(int j = 1; j < cols+OFFSET; j++) {
+					sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
+				}	
+			}
+			float sum_global_diff = 0;
+			MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+			float avgdiff = sum_global_diff/(rows*cols);
 		}
 		// -------------
 		//    WORKERS
 		// -------------
 		else {
 			// ---------- <receive initial chunk> -----------------
-			printf("⬇️ receiving on worker %d! expecting %d items \n", mpi_rank, (rows_per_worker+2)*(cols+OFFSET_2));
+			// printf("⬇️ receiving on worker %d! expecting %d items \n", mpi_rank, (rows_per_worker+2)*(cols+OFFSET_2));
 			MPI_Recv(local_box1, (lengths[mpi_rank]+2) * (cols+OFFSET_2),MPI_FLOAT,
 				0,        // source rank
 				mpi_rank, // tag
@@ -456,16 +494,16 @@ int main(int argc, char*argv[]) {
 						MPI_STATUS_IGNORE
 					);
 
-					if(iteration == num_iterations-1){
+					// if(iteration == num_iterations-1){
 						
-						printf("✅ --- MIDDLE CHUNK ---- :\n");
-						for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
-							for (int j = 0; j < cols + OFFSET_2; j++) {
-								printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
-							}	
-							printf("\n");
-						}
-					}
+					// 	printf("✅ --- MIDDLE CHUNK ---- :\n");
+					// 	for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+					// 		for (int j = 0; j < cols + OFFSET_2; j++) {
+					// 			printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+					// 		}	
+					// 		printf("\n");
+					// 	}
+					// }
 					
 					// sleep(0.5);
 					// printf("✅ RECVd ROM FROM ABOVE! Updated local box:\n");
@@ -476,6 +514,26 @@ int main(int argc, char*argv[]) {
 					// 	printf("\n");
 					// }
 				}
+				// <---------- 🟨 compute average ---------->
+				float sum_partial = 0;
+				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+					for(int j = 1; j < cols+OFFSET; j++) {
+						sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
+					}	
+				}
+				float sum_global = 0;
+				MPI_Allreduce(&sum_partial, &sum_global, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+				float average = sum_global/(rows*cols);
+				// <---------- 🟨 compute average absolute difference ---------->
+				float sum_partial_diff = 0;
+				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+					for(int j = 1; j < cols+OFFSET; j++) {
+						sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
+					}	
+				}
+				float sum_global_diff = 0;
+				MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+				float avgdiff = sum_global_diff/(rows*cols);
 				
 				
 			}
@@ -525,17 +583,39 @@ int main(int argc, char*argv[]) {
 					);
 					// sleep(1);
 					
-					if(iteration == num_iterations-1){
-						sleep(0.5);
-						printf("✅ --- LAST CHUNK ---- :\n");
-						for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
-							for (int j = 0; j < cols + OFFSET_2; j++) {
-								printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
-							}	
-							printf("\n");
-						}
-					}
+					// if(iteration == num_iterations-1){
+					// 	sleep(0.5);
+					// 	printf("✅ --- LAST CHUNK ---- :\n");
+					// 	for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+					// 		for (int j = 0; j < cols + OFFSET_2; j++) {
+					// 			printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+					// 		}	
+					// 		printf("\n");
+					// 	}
+					// }
 				}
+				// <---------- 🟨 compute average ---------->
+				float sum_partial = 0;
+				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+					for(int j = 1; j < cols+OFFSET; j++) {
+						sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
+					}	
+				}
+				float sum_global = 0;
+				MPI_Allreduce(&sum_partial, &sum_global, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+				float average = sum_global/(rows*cols);
+				printf("✅ GLOBAL final average: %f\n", average);
+				// <---------- 🟨 compute average absolute difference ---------->
+				float sum_partial_diff = 0;
+				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
+					for(int j = 1; j < cols+OFFSET; j++) {
+						sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
+					}	
+				}
+				float sum_global_diff = 0;
+				MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+				float avgdiff = sum_global_diff/(rows*cols);
+				printf("✅ GLOBAL final average diff: %f\n", avgdiff);
 
 				
 			}
