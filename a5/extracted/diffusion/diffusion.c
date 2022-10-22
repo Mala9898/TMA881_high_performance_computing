@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <stddef.h>
+#include <string.h>
+#include <assert.h>
 #include <time.h>
 #include <math.h>
 #include <mpi.h>
@@ -17,7 +19,7 @@ double cpu_time_used;
 
 int main(int argc, char*argv[]) {
 	
-	// start = clock();
+	start = clock();
 	MPI_Init(&argc, &argv);
 	
 	
@@ -154,16 +156,17 @@ int main(int argc, char*argv[]) {
 			// }
 
 			for(int i = 1; i < rows+OFFSET; i++) {
-				for(int j = 1; j < cols+OFFSET; j+=2) {
+				for(int j = 1; j < cols+OFFSET; j+= 2) {
 					idx = i*(cols+OFFSET_2) + j;
 					idx2 = i*(cols+OFFSET_2) + j+1;
 
 					left = input_box[i*(cols+OFFSET_2) + j-1];
 					right = input_box[i*(cols+OFFSET_2) + j+1];
 					up = input_box[(i-1)*(cols+OFFSET_2) + j];
-					down = input_box[(i+1)*(cols+OFFSET_2) + j];		
+					down = input_box[(i+1)*(cols+OFFSET_2) + j];
+					
 					output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
-			
+					// output_box[idx] = input_box[idx] + diff_constant* ((input_box[i*(cols+OFFSET_2) + j-1]+input_box[i*(cols+OFFSET_2) + j+1]+input_box[(i-1)*(cols+OFFSET_2) + j]+input_box[(i+1)*(cols+OFFSET_2) + j])/4.0 - input_box[idx]);
 
 					left2 = input_box[i*(cols+OFFSET_2) + j];
 					right2 = input_box[i*(cols+OFFSET_2) + j+2];
@@ -172,8 +175,12 @@ int main(int argc, char*argv[]) {
 					output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
 				}
 			}
-		
-			// swap boxes	
+			
+
+			
+
+			// swap boxes
+			
 			temp = input_box;
 			input_box = output_box;
 			output_box = temp;
@@ -199,7 +206,7 @@ int main(int argc, char*argv[]) {
 		
 
 		float avg = sum / (rows*cols);
-		printf("average = %f\n", avg);
+		printf("⭐️ average = %f\n", avg);
 		
 		float absdiffsum = 0;
 		for(int i = 1; i < rows+1; i++) {
@@ -209,13 +216,11 @@ int main(int argc, char*argv[]) {
 				// printf("i j = %d %d\n", i, j);
 				sum1 += fabsf(input_box[i*(cols+OFFSET_2) + j] - avg);
 				sum2 += fabsf(input_box[i*(cols+OFFSET_2) + j+1] - avg);
-				// sum1 += (input_box[i*(cols+OFFSET_2) + j] - avg) > 0 ? (input_box[i*(cols+OFFSET_2) + j] - avg) : (input_box[i*(cols+OFFSET_2) + j] - avg)*(-1.0);
-				// sum1 += (input_box[i*(cols+OFFSET_2) + j+1] - avg) > 0 ? (input_box[i*(cols+OFFSET_2) + j+1] - avg) : (input_box[i*(cols+OFFSET_2) + j+1] - avg)*(-1.0);
 			}
 			absdiffsum += sum1 + sum2;
 		}
 		float absdiff = absdiffsum / (rows*cols);
-		printf("average abolute difference = %f\n", absdiff);
+		printf("⭐️ average abolute difference = %f\n", absdiff);
 		// end = clock();	
 		
 	} 
@@ -224,24 +229,11 @@ int main(int argc, char*argv[]) {
 	//            Case 2: more than one node
 	// ---------------------------------------------------
 	else {
-	// 	// printf("rows= %d\n", rows);
-	// 	int accumulator;
-	// 	MPI_Reduce(&rows, &accumulator, 1, MPI_INT, MPI_SUM, master_node, MPI_COMM_WORLD);
-	// 	if (mpi_rank==0) {
-	// 		printf("REDUCED VALUE: %d\n", accumulator);
-	// 	}
-
-		// -------------
-		//    MASTER
-		// -------------
-		if (mpi_rank == 0) {
-			
-		} 
-		// -------------
-		//    WORKERS
-		// -------------
-		else {
-
+		// printf("rows= %d\n", rows);
+		int accumulator;
+		MPI_Reduce(&rows, &accumulator, 1, MPI_INT, MPI_SUM, master_node, MPI_COMM_WORLD);
+		if (mpi_rank==0) {
+			printf("REDUCED VALUE: %d\n", accumulator);
 		}
 	}
 	
@@ -255,6 +247,6 @@ int main(int argc, char*argv[]) {
 	MPI_Finalize();
 	
 
-	// printf("TIME =  %lf seconds\n", (double)(clock() - start)/CLOCKS_PER_SEC);			
+	printf("TIME =  %lf seconds\n", (double)(clock() - start)/CLOCKS_PER_SEC);			
 	
 }
