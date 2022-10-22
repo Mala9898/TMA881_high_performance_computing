@@ -9,6 +9,7 @@
 #include <string.h>
 #include <mpi.h>
 
+#include<unistd.h> // sleep for debugging
 clock_t start, end;
 double cpu_time_used; 
 
@@ -241,6 +242,12 @@ int main(int argc, char*argv[]) {
 		int starts[number_workers];
 		int lengths[number_workers];
 		float * local_box1 = (float*) calloc(sizeof(float), (cols+OFFSET_2)*(rows_per_worker+OFFSET_2) );
+		float * local_box2 = (float*) calloc(sizeof(float), (cols+OFFSET_2)*(rows_per_worker+OFFSET_2) );
+
+		float * input_box = local_box1;
+		float * output_box = local_box2;
+		float * temp;
+		
 		// float * local_box1 = (float*) malloc(sizeof(float) * (cols+OFFSET_2)*(rows_per_worker+OFFSET_2+100) );
 		printf("row_per_worker = %d, local box size = %d\n", rows_per_worker, (cols+OFFSET_2)*(rows_per_worker+OFFSET_2));
 
@@ -267,13 +274,11 @@ int main(int argc, char*argv[]) {
 		//    MASTER
 		// -------------
 		if(mpi_rank == 0){
-
-			
-
 			// create local chunk for master first. include row above and below
 			memcpy(local_box1, box1, (lengths[0]+OFFSET_2)*(cols+OFFSET_2)*sizeof(float) ); // destiantion , source, num
+
 			printf("--------MASTER NODE LOCAL: (num items copied = %d)---------\n", (lengths[0]+OFFSET_2)*(cols+OFFSET_2));
-			for (int i = 0; i < rows + OFFSET_2; i++) {
+			for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
 				for (int j = 0; j < cols + OFFSET_2; j++) {
 					printf("%.0f ", local_box1[i*(cols+OFFSET_2) + j]);
 				}	
@@ -298,32 +303,244 @@ int main(int argc, char*argv[]) {
 				printf("sent out chunk to %d worker from master\n", worker);
 			} 
 
+			float left;
+			float right;
+			float up;
+			float down;
+			int idx;
 			// ---------- 🔥 DIFFUSE ITERATIONS 🔥 ----------
+			for (int iteration = 0; iteration < num_iterations; iteration++){
+				for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
+					for(int j = 1; j < cols+OFFSET; j++) {
+						idx = i*(cols+OFFSET_2) + j;
+
+						left = input_box[i*(cols+OFFSET_2) + j-1];
+						right = input_box[i*(cols+OFFSET_2) + j+1];
+						up = input_box[(i-1)*(cols+OFFSET_2) + j];
+						down = input_box[(i+1)*(cols+OFFSET_2) + j];		
+						output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
+					}
+				}
+				// swap boxes	
+				temp = input_box;
+				input_box = output_box;
+				output_box = temp;
+			
+				// float scrap[12] ={100.0f,100.0f,100.0f,100.0f,100.0f,100.0f,100.0f,100.0f,100.0f,100.0f, 100.0f,100.0f};
+				// input_box[(cols+OFFSET_2) + 2] = 999.0f;
+				//  exchange rows with node blow
+				MPI_Sendrecv( 
+					// scrap,
+					input_box + (starts[0]+lengths[0])*(cols+OFFSET_2),
+					cols+OFFSET_2,
+					MPI_FLOAT,
+					mpi_rank+1, // destination node
+					mpi_rank,   // tag - indicates to receiver it got it from above
+
+					input_box + (lengths[0]+1)*(cols+OFFSET_2), 
+					(cols+OFFSET_2), 
+					MPI_FLOAT, 
+					mpi_rank+1,        // source node
+					mpi_rank+1,		   // tag 
+
+					MPI_COMM_WORLD,
+					MPI_STATUS_IGNORE
+				);
+				// sleep(0.01);
+				// printf("--------🚨MASTER NODE LOCAL AFTER ITERATION---------\n");
+				// for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+				// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+				// 		printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+				// 	}	
+				// 	printf("\n");
+				// }
+				// printf("----------END OF MASTER MATRIX-------\n");
+				
+				// ----------     send shared rows     -----------
+				// printf("[master] sending this to BELOW \n\t");
+				// for (int j = 0; j < cols + OFFSET_2; j++) {
+				// 	printf("%.2f ", input_box[(starts[0] + lengths[0] )*(cols+OFFSET_2) + j]);
+				// }	
+				// printf("\n");
+
+			}
+
 		}
 		// -------------
 		//    WORKERS
 		// -------------
 		else {
+			// ---------- <receive initial chunk> -----------------
 			printf("⬇️ receiving on worker %d! expecting %d items \n", mpi_rank, (rows_per_worker+2)*(cols+OFFSET_2));
-			MPI_Recv(
-				// &local_box1,
-				// lengths[mpi_rank] * (cols+OFFSET_2),
-				local_box1,
-				(lengths[mpi_rank]+2) * (cols+OFFSET_2),
-				// (cols+OFFSET_2)*(rows_per_worker+OFFSET_2),
-				MPI_FLOAT,
+			MPI_Recv(local_box1, (lengths[mpi_rank]+2) * (cols+OFFSET_2),MPI_FLOAT,
 				0,        // source rank
 				mpi_rank, // tag
-				MPI_COMM_WORLD,
-				MPI_STATUS_IGNORE
+				MPI_COMM_WORLD, MPI_STATUS_IGNORE
 			);
-			printf("[worker=%d] received chunk. length = %d\n", mpi_rank, lengths[mpi_rank]);
-			for (int i = 0; i < rows + OFFSET_2; i++) {
-				for (int j = 0; j < cols + OFFSET_2; j++) {
-					printf("%.0f ", local_box1[i*(cols+OFFSET_2) + j]);
-				}	
-				printf("\n");
+			// ---------- </receive initial chunk> -----------------
+			// printf("[worker=%d] received chunk. length = %d\n", mpi_rank, lengths[mpi_rank]);
+			// for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+			// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+			// 		printf("%.0f ", local_box1[i*(cols+OFFSET_2) + j]);
+			// 	}	
+			// 	printf("\n");
+			// }
+
+			// --------- middle cunks ---------
+			if (mpi_rank > 0 && mpi_rank < number_workers-1) {
+				// printf("[%d] sending this to ABOVE \n\t", mpi_rank);
+				// for (int j = 0; j < cols + OFFSET_2; j++) {
+				// 	printf("%.0f ", local_box1[( 1)*(cols+OFFSET_2) + j]);
+				// }	
+				// printf("\n");
+
+				// printf("[%d] sending this to BELOW \n\t", mpi_rank);
+				// for (int j = 0; j < cols + OFFSET_2; j++) {
+				// 	printf("%.0f ", local_box1[( lengths[mpi_rank])*(cols+OFFSET_2) + j]);
+				// }	
+				// printf("\n");
+				// ✅ exchange with above
+				float left, right, up, down;
+				int idx;
+				for (int iteration = 0; iteration < num_iterations; iteration++){
+					for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
+						for(int j = 1; j < cols+OFFSET; j++) {
+							idx = i*(cols+OFFSET_2) + j;
+
+							left = input_box[i*(cols+OFFSET_2) + j-1];
+							right = input_box[i*(cols+OFFSET_2) + j+1];
+							up = input_box[(i-1)*(cols+OFFSET_2) + j];
+							down = input_box[(i+1)*(cols+OFFSET_2) + j];		
+							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
+						}
+					}
+					// swap boxes	
+					temp = input_box;
+					input_box = output_box;
+					output_box = temp;
+
+					MPI_Sendrecv(
+						input_box + (cols+OFFSET_2),
+						cols+OFFSET_2,
+						MPI_FLOAT,
+						mpi_rank-1, // destination node
+						mpi_rank,   // tag - indicates to receiver it got it from above
+
+						input_box, 
+						(cols+OFFSET_2), 
+						MPI_FLOAT, 
+						mpi_rank-1,        // source node
+						mpi_rank-1,
+
+						MPI_COMM_WORLD,
+						MPI_STATUS_IGNORE
+					);
+
+					
+					// exchange with below
+					MPI_Sendrecv( 
+						// scrap,
+						input_box + (starts[0]+lengths[0])*(cols+OFFSET_2),
+						cols+OFFSET_2,
+						MPI_FLOAT,
+						mpi_rank+1, // destination node
+						mpi_rank,         // tag - indicates to receiver it got it from above
+
+						input_box + (lengths[0]+1)*(cols+OFFSET_2), 
+						(cols+OFFSET_2), 
+						MPI_FLOAT, 
+						mpi_rank+1,        // source node
+						mpi_rank+1,				   // tag - 22 indicates we get it from below
+
+						MPI_COMM_WORLD,
+						MPI_STATUS_IGNORE
+					);
+
+					if(iteration == num_iterations-1){
+						
+						printf("✅ --- MIDDLE CHUNK ---- :\n");
+						for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+							for (int j = 0; j < cols + OFFSET_2; j++) {
+								printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+							}	
+							printf("\n");
+						}
+					}
+					
+					// sleep(0.5);
+					// printf("✅ RECVd ROM FROM ABOVE! Updated local box:\n");
+					// for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+					// 	for (int j = 0; j < cols + OFFSET_2; j++) {
+					// 		printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+					// 	}	
+					// 	printf("\n");
+					// }
+				}
+				
+				
 			}
+
+			// --------- last chunk ---------
+			if (mpi_rank == number_workers-1) {
+				// printf("[%d] sending this to ABOVE \n\t", mpi_rank);
+				// for (int j = 0; j < cols + OFFSET_2; j++) {
+				// 	printf("%.0f ", local_box1[( 1)*(cols+OFFSET_2) + j]);
+				// }	
+				// printf("\n");
+
+				float left, right, up, down;
+				int idx;
+				for (int iteration = 0; iteration < num_iterations; iteration++){
+					for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
+						for(int j = 1; j < cols+OFFSET; j++) {
+							idx = i*(cols+OFFSET_2) + j;
+
+							left = input_box[i*(cols+OFFSET_2) + j-1];
+							right = input_box[i*(cols+OFFSET_2) + j+1];
+							up = input_box[(i-1)*(cols+OFFSET_2) + j];
+							down = input_box[(i+1)*(cols+OFFSET_2) + j];		
+							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
+						}
+					}
+					// swap boxes	
+					temp = input_box;
+					input_box = output_box;
+					output_box = temp;
+					MPI_Sendrecv( 
+						// scrap,
+						input_box + (1)*(cols+OFFSET_2),
+						cols+OFFSET_2,
+						MPI_FLOAT,
+						mpi_rank-1, // destination node
+						mpi_rank,         // tag - indicates to receiver it got it from above
+
+						input_box, 
+						(cols+OFFSET_2), 
+						MPI_FLOAT, 
+						mpi_rank-1,        // source node
+						mpi_rank-1,				   // tag - 22 indicates we get it from below
+
+						MPI_COMM_WORLD,
+						MPI_STATUS_IGNORE
+					);
+					// sleep(1);
+					
+					if(iteration == num_iterations-1){
+						sleep(0.5);
+						printf("✅ --- LAST CHUNK ---- :\n");
+						for (int i = 0; i < lengths[mpi_rank] + OFFSET_2; i++) {
+							for (int j = 0; j < cols + OFFSET_2; j++) {
+								printf("%.2f ", input_box[i*(cols+OFFSET_2) + j]);
+							}	
+							printf("\n");
+						}
+					}
+				}
+
+				
+			}
+			
+
 			
 		}
 	}
