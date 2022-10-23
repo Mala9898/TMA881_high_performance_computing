@@ -492,18 +492,57 @@ int main(int argc, char*argv[]) {
 				// }	
 				// printf("\n");
 				// ✅ exchange with above
-				float left, right, up, down;
-				int idx;
+				float left, left2,left3,left4;
+				float right, right2,right3, right4;
+				float up, up2,up3, up4;
+				float down, down2,down3, down4;
+				int idx, idx2,idx3, idx4;
+				// int idx;
 				for (int iteration = 0; iteration < num_iterations; iteration++){
-					for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
-						for(int j = 1; j < cols+OFFSET; j++) {
+					int iupper = lengths[mpi_rank] + OFFSET;
+					int jupper = cols+OFFSET;
+					for(int i = 1; i < iupper; i++) {
+						for(int j = 1; j < jupper; j+=4) {
 							idx = i*(cols+OFFSET_2) + j;
+							idx2 = i*(cols+OFFSET_2) + j+1;
+							idx3 = i*(cols+OFFSET_2) + j+2;
+							idx4 = i*(cols+OFFSET_2) + j+3;
 
 							left = input_box[i*(cols+OFFSET_2) + j-1];
 							right = input_box[i*(cols+OFFSET_2) + j+1];
 							up = input_box[(i-1)*(cols+OFFSET_2) + j];
 							down = input_box[(i+1)*(cols+OFFSET_2) + j];		
-							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
+							
+
+							left2 = input_box[i*(cols+OFFSET_2) + j];
+							right2 = input_box[i*(cols+OFFSET_2) + j+2];
+							up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
+							down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];		
+							
+
+							left3 = input_box[i*(cols+OFFSET_2) + j+1];
+							right3 = input_box[i*(cols+OFFSET_2) + j+3];
+							up3 = input_box[(i-1)*(cols+OFFSET_2) + j+2];
+							down3 = input_box[(i+1)*(cols+OFFSET_2) + j+2];		
+							
+
+							left4 = input_box[i*(cols+OFFSET_2) + j+2];
+							right4 = input_box[i*(cols+OFFSET_2) + j+4];
+							up4 = input_box[(i-1)*(cols+OFFSET_2) + j+3];
+							down4 = input_box[(i+1)*(cols+OFFSET_2) + j+3];	
+
+							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);		
+							output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
+							output_box[idx3] = input_box[idx3] + diff_constant* ((left3+right3+up3+down3)/4.0 - input_box[idx3]);
+							output_box[idx4] = input_box[idx4] + diff_constant* ((left4+right4+up4+down4)/4.0 - input_box[idx4]);
+							// output_box[idx] = (1-diff_constant)*input_box[idx] + diff_constant* ((left+right+up+down)*0.25 );
+							// output_box[idx] = b_ij + diff_constant* ((left+right+up+down)/4.0 - b_ij);
+
+							// left2 = input_box[i*(cols+OFFSET_2) + j];
+							// right2 = input_box[i*(cols+OFFSET_2) + j+2];
+							// up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
+							// down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];
+							// output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
 						}
 					}
 					// swap boxes	

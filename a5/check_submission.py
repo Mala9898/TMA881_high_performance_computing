@@ -4,13 +4,13 @@ import argparse, os, subprocess, shutil
 
 
 def check_runtimes(path):
-  return (   check_runtime( 100   , 100   , "0.01" , 100000 , 1  , path , 3.93 , 10 )
-         and check_runtime( 100   , 100   , "0.01" , 100000 , 10 , path , 4.23 , 10 )
-         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 2  , path , 93.8  , 3 )
-         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 5  , path , 41.7 , 3 )
-         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 10 , path , 24.0 , 3 )
-         and check_runtime( 10000 , 1000  , "0.6"  , 200    , 1  , path , 6.93 , 3 )
-         and check_runtime( 10000 , 1000  , "0.6"  , 200    , 5  , path , 4.25 , 3 )
+  return (   check_runtime( 100   , 100   , "0.01" , 100000 , 1  , path , 3.93 , 3 )
+         and check_runtime( 100   , 100   , "0.01" , 100000 , 10 , path , 4.23 , 3 )
+         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 2  , path , 93.8  , 1 )
+         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 5  , path , 41.7 , 1 )
+         and check_runtime( 10000 , 10000 , "0.02" , 1000   , 10 , path , 24.0 , 1 )
+         and check_runtime( 10000 , 1000  , "0.6"  , 200    , 1  , path , 6.93 , 1 )
+         and check_runtime( 10000 , 1000  , "0.6"  , 200    , 5  , path , 4.25 , 1 )
          )
 
 def check_runtime(width, height, d, n, p, path, time_bd, repeat):
@@ -26,9 +26,13 @@ def check_runtime(width, height, d, n, p, path, time_bd, repeat):
 
   diffusion_cmd = ("/usr/lib64/openmpi/bin/mpirun -n {p} ./diffusion -d{d} -n{n}"
                    .format(p = p, d = d, n = n))
+
   cmd = (("hyperfine --export-csv {bench} --time-unit millisecond " +
-          "--warmup {warmup} --max-runs {repeat} \"{cmd}\"")
-         .format(bench = "bench.csv", warmup = warmup, repeat = repeat, cmd = diffusion_cmd))
+    "--max-runs {repeat} \"{cmd}\"")
+    .format(bench = "bench.csv", repeat = repeat, cmd = diffusion_cmd))
+#   cmd = (("hyperfine --export-csv {bench} --time-unit millisecond " +
+#           "--warmup {warmup} --max-runs {repeat} \"{cmd}\"")
+#          .format(bench = "bench.csv", warmup = warmup, repeat = repeat, cmd = diffusion_cmd))
 
   try:
     print(cmd)
