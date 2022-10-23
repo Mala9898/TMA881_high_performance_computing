@@ -13,7 +13,7 @@ __kernel void vec_add(__global const double *box1,
 	double left = (j!=0) ? box1[i*cols + j-1] : 0.0;
 	double right = (j != cols -1) ? box1[i*cols + j+1] : 0.0;
 	double up = i != 0 ? box1[(i-1)*cols + j] : 0.0;
-	double down = rows -1 ? box1[(i+1)*cols + j] : 0.0;
+	double down = i != (rows -1) ? box1[(i+1)*cols + j] : 0.0;
 
 	// box2[idx] = 1;
 	box2[idx] = box1[idx] + diffconstant* ((left+right+up+down)/4.0 - box1[idx]);

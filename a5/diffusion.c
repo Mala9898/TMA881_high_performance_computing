@@ -274,10 +274,8 @@ int main(int argc, char*argv[]) {
 					lengths[worker] = rows - worker*rows_per_worker;
 				}
 			}
-			if(mpi_rank == 0){
-				printf("start   %d = %d\n", worker, starts[worker]);
-				printf("lengths %d = %d\n", worker, lengths[worker]);
-			}
+			// printf("start   %d = %d\n", worker, starts[worker]);
+			// printf("lengths %d = %d\n", worker, lengths[worker]);
 		}
 
 		// -------------
@@ -313,49 +311,22 @@ int main(int argc, char*argv[]) {
 				// printf("sent out chunk to %d worker from master\n", worker);
 			} 
 
-			float left, left2,left3,left4;
-			float right, right2,right3, right4;
-			float up, up2,up3, up4;
-			float down, down2,down3, down4;
-			int idx, idx2,idx3, idx4;
-			// 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+			float left;
+			float right;
+			float up;
+			float down;
+			int idx;
 			// ---------- 🔥 DIFFUSE ITERATIONS 🔥 ----------
-			// 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 			for (int iteration = 0; iteration < num_iterations; iteration++){
 				for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
-					for(int j = 1; j < cols+OFFSET; j+=4) {
+					for(int j = 1; j < cols+OFFSET; j++) {
 						idx = i*(cols+OFFSET_2) + j;
-						idx2 = i*(cols+OFFSET_2) + j+1;
-						idx3 = i*(cols+OFFSET_2) + j+2;
-						idx4 = i*(cols+OFFSET_2) + j+3;
 
 						left = input_box[i*(cols+OFFSET_2) + j-1];
 						right = input_box[i*(cols+OFFSET_2) + j+1];
 						up = input_box[(i-1)*(cols+OFFSET_2) + j];
 						down = input_box[(i+1)*(cols+OFFSET_2) + j];		
-						
-
-						left2 = input_box[i*(cols+OFFSET_2) + j];
-						right2 = input_box[i*(cols+OFFSET_2) + j+2];
-						up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
-						down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];		
-						
-
-						left3 = input_box[i*(cols+OFFSET_2) + j+1];
-						right3 = input_box[i*(cols+OFFSET_2) + j+3];
-						up3 = input_box[(i-1)*(cols+OFFSET_2) + j+2];
-						down3 = input_box[(i+1)*(cols+OFFSET_2) + j+2];		
-						
-
-						left4 = input_box[i*(cols+OFFSET_2) + j+2];
-						right4 = input_box[i*(cols+OFFSET_2) + j+4];
-						up4 = input_box[(i-1)*(cols+OFFSET_2) + j+3];
-						down4 = input_box[(i+1)*(cols+OFFSET_2) + j+3];	
-
-						output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);		
-						output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
-						output_box[idx3] = input_box[idx3] + diff_constant* ((left3+right3+up3+down3)/4.0 - input_box[idx3]);
-						output_box[idx4] = input_box[idx4] + diff_constant* ((left4+right4+up4+down4)/4.0 - input_box[idx4]);
+						output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
 					}
 				}
 				// swap boxes	
@@ -413,20 +384,10 @@ int main(int argc, char*argv[]) {
 			
 			// <---------- 🟨 compute average ---------->
 			float sum_partial = 0;
-			float s1 = 0;
-			float s2 = 0;
-			float s3 = 0;
-			float s4 = 0;
 			for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
-				
-				for(int j = 1; j < cols+OFFSET; j+=4) {
-					// sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
-					s1 += input_box[(i*(cols+OFFSET_2)) + j];
-					s2 += input_box[(i*(cols+OFFSET_2)) + j+1];
-					s3 += input_box[(i*(cols+OFFSET_2)) + j+2];
-					s4 += input_box[(i*(cols+OFFSET_2)) + j+3];
+				for(int j = 1; j < cols+OFFSET; j++) {
+					sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
 				}	
-				sum_partial += s1+s2+s3+s4;
 			}
 			// printf("partial 1st %f\n", sum_partial);
 			float sum_global = 0;
@@ -434,26 +395,11 @@ int main(int argc, char*argv[]) {
 			float average = sum_global/(rows*cols);
 			// <---------- 🟨 compute average absolute difference ---------->
 			float sum_partial_diff = 0;
-			s1 = 0;
-			s2 = 0;
-			s3 = 0;
-			s4 = 0;
 			for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
-				
-				for(int j = 1; j < cols+OFFSET; j+=4) {
-					// sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
-					// s1 += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
-					// s2 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+1] - average);
-					// s3 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+2] - average);
-					// s4 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+3] - average);
-					s1 += (input_box[(i*(cols+OFFSET_2)) + j] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j] - average) : (input_box[(i*(cols+OFFSET_2)) + j] - average)*-1.0f;
-					s2 += (input_box[(i*(cols+OFFSET_2)) + j+1] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+1] - average) : (input_box[(i*(cols+OFFSET_2)) + j+1] - average)*-1.0f;
-					s3 += (input_box[(i*(cols+OFFSET_2)) + j+2] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+2] - average) : (input_box[(i*(cols+OFFSET_2)) + j+2] - average)*-1.0f;
-					s4 += (input_box[(i*(cols+OFFSET_2)) + j+3] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+3] - average) : (input_box[(i*(cols+OFFSET_2)) + j+3] - average)*-1.0f;
+				for(int j = 1; j < cols+OFFSET; j++) {
+					sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
 				}	
-				
 			}
-			sum_partial_diff = s1 + s2 + s3 + s3;
 			float sum_global_diff = 0;
 			MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
 			float avgdiff = sum_global_diff/(rows*cols);
@@ -492,57 +438,18 @@ int main(int argc, char*argv[]) {
 				// }	
 				// printf("\n");
 				// ✅ exchange with above
-				float left, left2,left3,left4;
-				float right, right2,right3, right4;
-				float up, up2,up3, up4;
-				float down, down2,down3, down4;
-				int idx, idx2,idx3, idx4;
-				// int idx;
+				float left, right, up, down;
+				int idx;
 				for (int iteration = 0; iteration < num_iterations; iteration++){
-					int iupper = lengths[mpi_rank] + OFFSET;
-					int jupper = cols+OFFSET;
-					for(int i = 1; i < iupper; i++) {
-						for(int j = 1; j < jupper; j+=4) {
+					for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
+						for(int j = 1; j < cols+OFFSET; j++) {
 							idx = i*(cols+OFFSET_2) + j;
-							idx2 = i*(cols+OFFSET_2) + j+1;
-							idx3 = i*(cols+OFFSET_2) + j+2;
-							idx4 = i*(cols+OFFSET_2) + j+3;
 
 							left = input_box[i*(cols+OFFSET_2) + j-1];
 							right = input_box[i*(cols+OFFSET_2) + j+1];
 							up = input_box[(i-1)*(cols+OFFSET_2) + j];
 							down = input_box[(i+1)*(cols+OFFSET_2) + j];		
-							
-
-							left2 = input_box[i*(cols+OFFSET_2) + j];
-							right2 = input_box[i*(cols+OFFSET_2) + j+2];
-							up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
-							down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];		
-							
-
-							left3 = input_box[i*(cols+OFFSET_2) + j+1];
-							right3 = input_box[i*(cols+OFFSET_2) + j+3];
-							up3 = input_box[(i-1)*(cols+OFFSET_2) + j+2];
-							down3 = input_box[(i+1)*(cols+OFFSET_2) + j+2];		
-							
-
-							left4 = input_box[i*(cols+OFFSET_2) + j+2];
-							right4 = input_box[i*(cols+OFFSET_2) + j+4];
-							up4 = input_box[(i-1)*(cols+OFFSET_2) + j+3];
-							down4 = input_box[(i+1)*(cols+OFFSET_2) + j+3];	
-
-							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);		
-							output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
-							output_box[idx3] = input_box[idx3] + diff_constant* ((left3+right3+up3+down3)/4.0 - input_box[idx3]);
-							output_box[idx4] = input_box[idx4] + diff_constant* ((left4+right4+up4+down4)/4.0 - input_box[idx4]);
-							// output_box[idx] = (1-diff_constant)*input_box[idx] + diff_constant* ((left+right+up+down)*0.25 );
-							// output_box[idx] = b_ij + diff_constant* ((left+right+up+down)/4.0 - b_ij);
-
-							// left2 = input_box[i*(cols+OFFSET_2) + j];
-							// right2 = input_box[i*(cols+OFFSET_2) + j+2];
-							// up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
-							// down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];
-							// output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
+							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
 						}
 					}
 					// swap boxes	
@@ -608,7 +515,6 @@ int main(int argc, char*argv[]) {
 					// }
 				}
 				// <---------- 🟨 compute average ---------->
-				
 				float sum_partial = 0;
 				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
 					for(int j = 1; j < cols+OFFSET; j++) {
@@ -630,7 +536,6 @@ int main(int argc, char*argv[]) {
 				float avgdiff = sum_global_diff/(rows*cols);
 				
 				
-				
 			}
 
 			// --------- last chunk ---------
@@ -641,70 +546,20 @@ int main(int argc, char*argv[]) {
 				// }	
 				// printf("\n");
 
-				start = clock();
-
-				double time_in_iterations = 0.0;
-				double time_in_iterations_start = 0.0;
-
-				float left, left2,left3,left4;
-				float right, right2,right3, right4;
-				float up, up2,up3, up4;
-				float down, down2,down3, down4;
-				int idx, idx2,idx3, idx4;
-				float b_ij;
-				// 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+				float left, right, up, down;
+				int idx;
 				for (int iteration = 0; iteration < num_iterations; iteration++){
-					// double time_in_iterations_start = clock();
-
-
-					int iupper = lengths[mpi_rank] + OFFSET;
-					int jupper = cols+OFFSET;
-					for(int i = 1; i < iupper; i++) {
-						for(int j = 1; j < jupper; j+=4) {
+					for(int i = 1; i < lengths[mpi_rank] + OFFSET; i++) {
+						for(int j = 1; j < cols+OFFSET; j++) {
 							idx = i*(cols+OFFSET_2) + j;
-							idx2 = i*(cols+OFFSET_2) + j+1;
-							idx3 = i*(cols+OFFSET_2) + j+2;
-							idx4 = i*(cols+OFFSET_2) + j+3;
 
 							left = input_box[i*(cols+OFFSET_2) + j-1];
 							right = input_box[i*(cols+OFFSET_2) + j+1];
 							up = input_box[(i-1)*(cols+OFFSET_2) + j];
 							down = input_box[(i+1)*(cols+OFFSET_2) + j];		
-							
-
-							left2 = input_box[i*(cols+OFFSET_2) + j];
-							right2 = input_box[i*(cols+OFFSET_2) + j+2];
-							up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
-							down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];		
-							
-
-							left3 = input_box[i*(cols+OFFSET_2) + j+1];
-							right3 = input_box[i*(cols+OFFSET_2) + j+3];
-							up3 = input_box[(i-1)*(cols+OFFSET_2) + j+2];
-							down3 = input_box[(i+1)*(cols+OFFSET_2) + j+2];		
-							
-
-							left4 = input_box[i*(cols+OFFSET_2) + j+2];
-							right4 = input_box[i*(cols+OFFSET_2) + j+4];
-							up4 = input_box[(i-1)*(cols+OFFSET_2) + j+3];
-							down4 = input_box[(i+1)*(cols+OFFSET_2) + j+3];	
-
-							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);		
-							output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
-							output_box[idx3] = input_box[idx3] + diff_constant* ((left3+right3+up3+down3)/4.0 - input_box[idx3]);
-							output_box[idx4] = input_box[idx4] + diff_constant* ((left4+right4+up4+down4)/4.0 - input_box[idx4]);
-							// output_box[idx] = (1-diff_constant)*input_box[idx] + diff_constant* ((left+right+up+down)*0.25 );
-							// output_box[idx] = b_ij + diff_constant* ((left+right+up+down)/4.0 - b_ij);
-
-							// left2 = input_box[i*(cols+OFFSET_2) + j];
-							// right2 = input_box[i*(cols+OFFSET_2) + j+2];
-							// up2 = input_box[(i-1)*(cols+OFFSET_2) + j+1];
-							// down2 = input_box[(i+1)*(cols+OFFSET_2) + j+1];
-							// output_box[idx2] = input_box[idx2] + diff_constant* ((left2+right2+up2+down2)/4.0 - input_box[idx2]);
+							output_box[idx] = input_box[idx] + diff_constant* ((left+right+up+down)/4.0 - input_box[idx]);
 						}
 					}
-					// time_in_iterations += clock() - time_in_iterations_start;
-
 					// swap boxes	
 					temp = input_box;
 					input_box = output_box;
@@ -739,14 +594,7 @@ int main(int argc, char*argv[]) {
 					// 	}
 					// }
 				}
-
-				// printf("iterations =  %lf seconds\n", (double)(clock() - start)/CLOCKS_PER_SEC);			
-				// double total_time = ((double)clock() - start)/CLOCKS_PER_SEC;
-				// printf("time in iterations =  %lf \n", ((double)time_in_iterations/CLOCKS_PER_SEC) );			
-				// printf("time in ttotal =  %lf \n", ((double)(clock() - start)/CLOCKS_PER_SEC) );			
-				
 				// <---------- 🟨 compute average ---------->
-				/*
 				float sum_partial = 0;
 				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
 					for(int j = 1; j < cols+OFFSET; j++) {
@@ -768,58 +616,7 @@ int main(int argc, char*argv[]) {
 				MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
 				float avgdiff = sum_global_diff/(rows*cols);
 				printf("✅ GLOBAL final average diff: %f\n", avgdiff);
-				*/
-				// <---------- 🟨 compute average ---------->
-				float sum_partial = 0;
-				float s1 = 0;
-				float s2 = 0;
-				float s3 = 0;
-				float s4 = 0;
-				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
-					for(int j = 1; j < cols+OFFSET; j+=4) {
-						// sum_partial += input_box[(i*(cols+OFFSET_2)) + j];
-						s1 += input_box[(i*(cols+OFFSET_2)) + j];
-						s2 += input_box[(i*(cols+OFFSET_2)) + j+1];
-						s3 += input_box[(i*(cols+OFFSET_2)) + j+2];
-						s4 += input_box[(i*(cols+OFFSET_2)) + j+3];
-					}	
-					
-				}
-				sum_partial = s1+s2+s3+s4;
-				// printf("partial 1st %f\n", sum_partial);
-				float sum_global = 0;
-				MPI_Allreduce(&sum_partial, &sum_global, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
-				float average = sum_global/(rows*cols);
-				// <---------- 🟨 compute average absolute difference ---------->
-				float sum_partial_diff = 0;
-				float s12 = 0;
-				float s22 = 0;
-				float s32 = 0;
-				float s42 = 0;
-				for(int i = 1; i < lengths[mpi_rank]+OFFSET; i++) {
-					for(int j = 1; j < cols+OFFSET; j+=4) {
-						// sum_partial_diff += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
-						// s1 += fabsf(input_box[(i*(cols+OFFSET_2)) + j] - average);
-						// s2 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+1] - average);
-						// s3 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+2] - average);
-						// s4 += fabsf(input_box[(i*(cols+OFFSET_2)) + j+3] - average);
-						s12 += (input_box[(i*(cols+OFFSET_2)) + j] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j] - average) : (input_box[(i*(cols+OFFSET_2)) + j] - average)*-1.0f;
-						s22 += (input_box[(i*(cols+OFFSET_2)) + j+1] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+1] - average) : (input_box[(i*(cols+OFFSET_2)) + j+1] - average)*-1.0f;
-						s32 += (input_box[(i*(cols+OFFSET_2)) + j+2] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+2] - average) : (input_box[(i*(cols+OFFSET_2)) + j+2] - average)*-1.0f;
-						s42 += (input_box[(i*(cols+OFFSET_2)) + j+3] - average) >= 0 ? (input_box[(i*(cols+OFFSET_2)) + j+3] - average) : (input_box[(i*(cols+OFFSET_2)) + j+3] - average)*-1.0f;
-					}	
-				}
-				sum_partial_diff = s12 + s22 + s32 + s32;
-				float sum_global_diff = 0;
-				MPI_Allreduce(&sum_partial_diff, &sum_global_diff, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
-				float avgdiff = sum_global_diff/(rows*cols);
-				printf("✅ GLOBAL final average: %f\n", average);
-				printf("✅ GLOBAL final average diff: %f\n", avgdiff);
 
-				// printf("reducers =  %lf seconds\n", (double)(clock() - start)/CLOCKS_PER_SEC);			
-
-				// free(input_box);
-				// free(output_box);
 				
 			}
 			
@@ -828,16 +625,10 @@ int main(int argc, char*argv[]) {
 		}
 	}
 	
-
-
-	
-	
-	
-
 	
 	MPI_Finalize();
 	
 
-	
+	// printf("TIME =  %lf seconds\n", (double)(clock() - start)/CLOCKS_PER_SEC);			
 	
 }
