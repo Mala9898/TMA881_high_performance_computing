@@ -1,7 +1,9 @@
 BINS = ping
 LIBRARIES = -L/usr/lib64/openmpi/lib -lm -lmpi -Wl,-rpath,/usr/lib64/openmpi/lib -Wl,--enable-new-dtags
-# CFLAGS  = -ffast-math -O3 -I. -I/usr/include/openmpi-x86_64 -pthread $(LIBRARIES)
-CFLAGS  = -O2 -I. -I/usr/include/openmpi-x86_64 -pthread $(LIBRARIES)
+
+# Martin said -O3 is allowed 
+CFLAGS  = -ffast-math -O3 -I. -I/usr/include/openmpi-x86_64 -pthread $(LIBRARIES)
+# CFLAGS  = -O2 -I. -I/usr/include/openmpi-x86_64 -pthread $(LIBRARIES)
 
 .PHONY : all 
 
@@ -15,10 +17,3 @@ test : diffusion makefile
 
 clean:
 	rm -rf extracted/ diffusion.tar.gz diffusion
-
-ping : ping.c
-	gcc $(CFLAGS) -o $@ $<
-
-
-scrap : scrap.c makefile
-	gcc -o scrap scrap.c -lm -O2 -g
